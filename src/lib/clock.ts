@@ -1,6 +1,11 @@
 import { Linking, Platform } from 'react-native';
 
-import type { ClockInterface } from '@/lib/clock-interface';
+export type SetAlarmArguments = {
+  hour: number;
+  minute: number;
+  label?: string;
+  skipUI?: boolean;
+};
 
 type IntentExtra = {
   key: string;
@@ -11,18 +16,13 @@ function isWholeNumber(value: number) {
   return Number.isInteger(value);
 }
 
-export class Clock implements ClockInterface {
+export class Clock {
   async setAlarm({
     hour,
     minute,
     label,
     skipUI = false,
-  }: {
-    hour: number;
-    minute: number;
-    label?: string;
-    skipUI?: boolean;
-  }): Promise<void> {
+  }: SetAlarmArguments): Promise<void> {
     if (Platform.OS !== 'android') {
       throw new Error('Setting alarms is only implemented for Android.');
     }

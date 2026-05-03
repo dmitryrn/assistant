@@ -1,13 +1,6 @@
 import type { FunctionTool, Response, ResponseFunctionToolCall } from 'openai/resources/responses/responses';
 
-import type { ClockInterface } from '@/lib/clock-interface';
-
-type SetAlarmArguments = {
-  hour: number;
-  minute: number;
-  label?: string;
-  skipUI?: boolean;
-};
+import type { SetAlarmArguments } from '@/lib/clock';
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -34,7 +27,11 @@ export class ToolsExecutor {
     },
   ];
 
-  constructor(private clock: ClockInterface) {}
+  constructor(
+    private clock: {
+      setAlarm(arguments_: SetAlarmArguments): Promise<void>;
+    },
+  ) {}
 
   async execute(response: Response): Promise<void> {
     const toolCalls = this.getToolCalls(response);
