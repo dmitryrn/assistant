@@ -1,5 +1,7 @@
 import { Linking, Platform } from 'react-native';
 
+import type { ClockInterface } from '@/lib/clock-interface';
+
 type IntentExtra = {
   key: string;
   value: string | number | boolean;
@@ -9,7 +11,7 @@ function isWholeNumber(value: number) {
   return Number.isInteger(value);
 }
 
-export class Clock {
+export class Clock implements ClockInterface {
   async setAlarm({
     hour,
     minute,

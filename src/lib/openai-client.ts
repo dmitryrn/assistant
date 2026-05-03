@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import type { FunctionTool } from 'openai/resources/responses/responses';
 
 const DEFAULT_MODEL = 'gpt-4.1-mini';
 
@@ -6,6 +7,7 @@ type CreateResponseArgs = {
   model?: string;
   prompt: string;
   systemPrompt?: string;
+  tools?: FunctionTool[];
 };
 
 export class OpenAIClient {
@@ -18,7 +20,7 @@ export class OpenAIClient {
     });
   }
 
-  request({ model = DEFAULT_MODEL, prompt, systemPrompt }: CreateResponseArgs) {
+  request({ model = DEFAULT_MODEL, prompt, systemPrompt, tools }: CreateResponseArgs) {
     const input = [];
 
     if (systemPrompt) {
@@ -36,6 +38,7 @@ export class OpenAIClient {
     return this.client.responses.create({
       model,
       input,
+      tools,
     });
   }
 }
