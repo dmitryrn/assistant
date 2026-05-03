@@ -1,5 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -7,66 +6,29 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-
-const OPENAI_API_KEY_STORAGE_KEY = 'settings.openaiApiKey';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { clearSettingsError, loadSettings, saveSettings, setOpenAIAPIKey } from '@/store/settings';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
-  const [apiKey, setApiKey] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
+  const { openAIAPIKey, isLoading, error } = useAppSelector((state) => state.settings);
 
   useEffect(() => {
-    let isMounted = true;
+    dispatch(loadSettings());
+  }, [dispatch]);
 
-    async function loadApiKey() {
-      try {
-        const storedValue = await SecureStore.getItemAsync(OPENAI_API_KEY_STORAGE_KEY);
-        if (isMounted && storedValue) {
-          setApiKey(storedValue);
-        }
-      } catch {
-        if (isMounted) {
-          setStatus('Could not load the saved API key.');
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
+  function handleSave() {
+    dispatch(saveSettings({ openAIAPIKey }));
+  }
+
+  function handleChangeOpenAIAPIKey(value: string) {
+    if (error) {
+      dispatch(clearSettingsError());
     }
 
-    loadApiKey();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  async function handleSave() {
-    setIsSaving(true);
-    setStatus(null);
-
-    try {
-      const trimmedKey = apiKey.trim();
-
-      if (trimmedKey.length === 0) {
-        await SecureStore.deleteItemAsync(OPENAI_API_KEY_STORAGE_KEY);
-        setApiKey('');
-        setStatus('Saved empty value and cleared secure storage.');
-        return;
-      }
-
-      await SecureStore.setItemAsync(OPENAI_API_KEY_STORAGE_KEY, trimmedKey);
-      setApiKey(trimmedKey);
-      setStatus('API key saved to secure storage.');
-    } catch {
-      setStatus('Could not save the API key.');
-    } finally {
-      setIsSaving(false);
-    }
+    dispatch(setOpenAIAPIKey(value));
   }
 
   return (
@@ -88,7 +50,7 @@ export default function SettingsScreen() {
               <TextInput
                 autoCapitalize="none"
                 autoCorrect={false}
-                onChangeText={setApiKey}
+                onChangeText={handleChangeOpenAIAPIKey}
                 placeholder="sk-..."
                 placeholderTextColor={theme.textSecondary}
                 secureTextEntry
@@ -99,22 +61,22 @@ export default function SettingsScreen() {
                     borderColor: theme.backgroundSelected,
                   },
                 ]}
-                value={apiKey}
+                value={openAIAPIKey}
               />
               <Pressable
                 onPress={handleSave}
                 style={({ pressed }) => [
                   styles.button,
-                  { backgroundColor: theme.text, opacity: pressed || isSaving ? 0.75 : 1 },
+                  { backgroundColor: theme.text, opacity: pressed || isLoading ? 0.75 : 1 },
                 ]}
-                disabled={isSaving}>
+                disabled={isLoading}>
                 <ThemedText style={[styles.buttonText, { color: theme.background }]}>
-                  {isSaving ? 'Saving...' : 'Save'}
+                  {isLoading ? 'Saving...' : 'Save'}
                 </ThemedText>
               </Pressable>
             </>
           )}
-          {status ? <ThemedText type="small">{status}</ThemedText> : null}
+          {error ? <ThemedText type="small">{error}</ThemedText> : null}
         </ThemedView>
       </SafeAreaView>
     </ThemedView>
