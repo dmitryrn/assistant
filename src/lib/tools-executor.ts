@@ -33,12 +33,14 @@ export class ToolsExecutor {
     },
   ) {}
 
-  async execute(response: Response): Promise<void> {
+  async execute(response: Response): Promise<ResponseFunctionToolCall[]> {
     const toolCalls = this.getToolCalls(response);
 
     for (const toolCall of toolCalls) {
       await this.executeToolCall(toolCall);
     }
+
+    return toolCalls;
   }
 
   private getToolCalls(response: Response): ResponseFunctionToolCall[] {
@@ -69,11 +71,21 @@ export class ToolsExecutor {
       throw new Error('Tool arguments must be a JSON object.');
     }
 
+    let label: string | undefined;
+    if (typeof parsedArguments.label === 'string') {
+      label = parsedArguments.label;
+    }
+
+    let skipUI: boolean | undefined;
+    if (typeof parsedArguments.skipUI === 'boolean') {
+      skipUI = parsedArguments.skipUI;
+    }
+
     return {
       hour: parsedArguments.hour as number,
       minute: parsedArguments.minute as number,
-      label: parsedArguments.label as string | undefined,
-      skipUI: parsedArguments.skipUI as boolean | undefined,
+      label,
+      skipUI,
     };
   }
 }

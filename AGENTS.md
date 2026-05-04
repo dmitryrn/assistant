@@ -1,0 +1,1 @@
+- don't use ternary, use if instead

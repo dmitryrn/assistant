@@ -1,4 +1,4 @@
-import type { Response } from 'openai/resources/responses/responses';
+import type { ResponseFunctionToolCall } from 'openai/resources/responses/responses';
 
 import { OpenAIClient } from '@/lib/openai-client';
 import { ToolsExecutor } from '@/lib/tools-executor';
@@ -9,14 +9,12 @@ export class AppService {
     private toolsExecutor: ToolsExecutor,
   ) {}
 
-  async request(prompt: string): Promise<Response> {
+  async request(prompt: string): Promise<ResponseFunctionToolCall[]> {
     const response = await this.openAIClient.request({
       prompt,
       tools: this.toolsExecutor.tools,
     });
 
-    await this.toolsExecutor.execute(response);
-
-    return response;
+    return this.toolsExecutor.execute(response);
   }
 }

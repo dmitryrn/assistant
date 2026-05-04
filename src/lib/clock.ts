@@ -1,15 +1,11 @@
-import { Linking, Platform } from 'react-native';
+import { startActivityAsync } from 'expo-intent-launcher';
+import { Platform } from 'react-native';
 
 export type SetAlarmArguments = {
   hour: number;
   minute: number;
   label?: string;
   skipUI?: boolean;
-};
-
-type IntentExtra = {
-  key: string;
-  value: string | number | boolean;
 };
 
 function isWholeNumber(value: number) {
@@ -35,16 +31,16 @@ export class Clock {
       throw new Error('Minute must be an integer between 0 and 59.');
     }
 
-    const extras: IntentExtra[] = [
-      { key: 'android.intent.extra.alarm.HOUR', value: hour },
-      { key: 'android.intent.extra.alarm.MINUTES', value: minute },
-      { key: 'android.intent.extra.alarm.SKIP_UI', value: skipUI },
-    ];
+    const extra: Record<string, string | number | boolean> = {
+      'android.intent.extra.alarm.HOUR': hour,
+      'android.intent.extra.alarm.MINUTES': minute,
+      'android.intent.extra.alarm.SKIP_UI': skipUI,
+    };
 
     if (label) {
-      extras.push({ key: 'android.intent.extra.alarm.MESSAGE', value: label });
+      extra['android.intent.extra.alarm.MESSAGE'] = label;
     }
 
-    await Linking.sendIntent('android.intent.action.SET_ALARM', extras);
+    await startActivityAsync('android.intent.action.SET_ALARM', { extra });
   }
 }

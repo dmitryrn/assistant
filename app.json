@@ -17,9 +17,6 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "permissions": [
-        "com.android.alarm.permission.SET_ALARM"
-      ],
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.mobile"
     },
