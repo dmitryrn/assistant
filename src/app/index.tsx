@@ -15,7 +15,7 @@ export default function HomeScreen() {
   const theme = useTheme();
   const dispatch = useAppDispatch();
   const [prompt, setPrompt] = useState('');
-  const { isLoading, error } = useAppSelector((state) => state.request);
+  const { isLoading, error, toolCallsDebug } = useAppSelector((state) => state.request);
 
   useEffect(() => {
     dispatch(loadSettings());
@@ -65,6 +65,19 @@ export default function HomeScreen() {
             </ThemedText>
           </Pressable>
           {error ? <ThemedText type="small">{error}</ThemedText> : null}
+          {toolCallsDebug ? (
+            <ThemedView
+              style={[
+                styles.output,
+                {
+                  borderColor: theme.backgroundSelected,
+                },
+              ]}>
+              <ThemedText type="code" style={[styles.outputText, { color: theme.text }]}>
+                {toolCallsDebug}
+              </ThemedText>
+            </ThemedView>
+          ) : null}
         </ThemedView>
       </SafeAreaView>
     </ThemedView>
@@ -98,6 +111,17 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     fontSize: 16,
     textAlignVertical: 'top',
+  },
+  output: {
+    minHeight: 112,
+    borderWidth: 1,
+    borderRadius: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.three,
+  },
+  outputText: {
+    fontSize: 12,
+    lineHeight: 18,
   },
   button: {
     minHeight: 48,
