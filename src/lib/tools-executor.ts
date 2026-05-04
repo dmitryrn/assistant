@@ -18,10 +18,10 @@ export class ToolsExecutor {
         properties: {
           hour: { type: 'number' },
           minute: { type: 'number' },
-          label: { type: 'string' },
-          skipUI: { type: 'boolean' },
+          label: { type: ['string', 'null'] },
+          skipUI: { type: ['boolean', 'null'] },
         },
-        required: ['hour', 'minute'],
+        required: ['hour', 'minute', 'label', 'skipUI'],
         additionalProperties: false,
       },
     },

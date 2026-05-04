@@ -1,14 +1,29 @@
-import React from 'react';
-import { StyleSheet, TextInput } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { sendRequest } from '@/store/request';
+import { loadSettings } from '@/store/settings';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
+  const dispatch = useAppDispatch();
+  const [prompt, setPrompt] = useState('');
+  const { isLoading, error } = useAppSelector((state) => state.request);
+
+  useEffect(() => {
+    dispatch(loadSettings());
+  }, [dispatch]);
+
+  function handleSend() {
+    dispatch(sendRequest({ prompt }));
+  }
 
   return (
     <ThemedView style={styles.container}>
@@ -23,6 +38,7 @@ export default function HomeScreen() {
         <ThemedView type="backgroundElement" style={styles.card}>
           <TextInput
             multiline
+            onChangeText={setPrompt}
             placeholder="Your request"
             placeholderTextColor={theme.textSecondary}
             style={[
@@ -32,7 +48,23 @@ export default function HomeScreen() {
                 borderColor: theme.backgroundSelected,
               },
             ]}
+            value={prompt}
           />
+          <Pressable
+            onPress={handleSend}
+            style={({ pressed }) => [
+              styles.button,
+              {
+                backgroundColor: theme.text,
+                opacity: pressed || isLoading ? 0.75 : 1,
+              },
+            ]}
+            disabled={isLoading}>
+            <ThemedText style={[styles.buttonText, { color: theme.background }]}>
+              {isLoading ? 'Sending...' : 'Send request'}
+            </ThemedText>
+          </Pressable>
+          {error ? <ThemedText type="small">{error}</ThemedText> : null}
         </ThemedView>
       </SafeAreaView>
     </ThemedView>
@@ -66,5 +98,15 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     fontSize: 16,
     textAlignVertical: 'top',
+  },
+  button: {
+    minHeight: 48,
+    borderRadius: Spacing.three,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.three,
+  },
+  buttonText: {
+    fontWeight: 600,
   },
 });
