@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { formatTime } from './time.ts';
+import { formatTime } from './time';
 
 test('formatTime formats time as HH:mm:ss', (): void => {
   const date = new Date(2026, 0, 1, 5, 7, 9);

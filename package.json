@@ -10,7 +10,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "node --test"
+    "test": "node --import tsx --test"
   },
   "dependencies": {
     "@react-navigation/bottom-tabs": "^7.15.5",
@@ -48,6 +48,8 @@
     "@types/react": "~19.2.2",
     "eslint": "^9.39.4",
     "eslint-config-expo": "~55.0.0",
+    "tsx": "^4.22.0",
+    "tsx": "^4.20.6",
     "typescript": "~5.9.2"
   },
   "private": true
