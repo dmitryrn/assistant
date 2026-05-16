@@ -2,13 +2,14 @@ import React, { useEffect } from 'react';
 import { Pressable, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ModelDropdown } from '@/components/model-dropdown';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { clearSettingsError, loadSettings, saveSettings, setModel, setOpenAIAPIKey } from '@/store/settings';
+
+import { ModelDropdown } from './model-dropdown';
 
 export default function SettingsScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
