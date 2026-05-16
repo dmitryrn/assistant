@@ -5,11 +5,12 @@
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
+    "android": "expo run:android",
     "android:release": "expo run:android --variant release",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "test": "node --test"
   },
   "dependencies": {
     "@react-navigation/bottom-tabs": "^7.15.5",

@@ -10,7 +10,6 @@ export type SetAlarmArguments = {
 
 export type SetTimerArguments = {
   seconds: number;
-  label?: string;
   skipUI?: boolean;
 };
 
@@ -50,7 +49,7 @@ export class Clock {
     await startActivityAsync('android.intent.action.SET_ALARM', { extra });
   }
 
-  async setTimer({ seconds, label, skipUI = false }: SetTimerArguments): Promise<void> {
+  async setTimer({ seconds, skipUI = false }: SetTimerArguments): Promise<void> {
     if (Platform.OS !== 'android') {
       throw new Error('Setting timers is only implemented for Android.');
     }
@@ -63,10 +62,6 @@ export class Clock {
       'android.intent.extra.alarm.LENGTH': seconds,
       'android.intent.extra.alarm.SKIP_UI': skipUI,
     };
-
-    if (label) {
-      extra['android.intent.extra.alarm.MESSAGE'] = label;
-    }
 
     await startActivityAsync('android.intent.action.SET_TIMER', { extra });
   }

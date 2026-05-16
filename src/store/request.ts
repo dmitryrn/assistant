@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 
-import { getAppService, type RootState } from '@/store';
+import { getAppService } from '@/lib/get-app-service';
+import type { RootState } from '@/store';
 
 type RequestState = {
   isLoading: boolean;

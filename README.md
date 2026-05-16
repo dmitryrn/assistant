@@ -1,5 +1,5 @@
 # Main info
-"android": "expo start --android", -- dev
+"android": "expo run:android", -- dev
 "android:release": "expo run:android --variant release", -- install APK
 
 # Other setup steps

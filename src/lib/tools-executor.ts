@@ -34,10 +34,9 @@ export class ToolsExecutor {
         type: 'object',
         properties: {
           seconds: { type: 'number' },
-          label: { type: ['string', 'null'] },
           skipUI: { type: ['boolean', 'null'] },
         },
-        required: ['seconds', 'label', 'skipUI'],
+        required: ['seconds', 'skipUI'],
         additionalProperties: false,
       },
     },
@@ -118,11 +117,6 @@ export class ToolsExecutor {
       throw new Error('Tool arguments must be a JSON object.');
     }
 
-    let label: string | undefined;
-    if (typeof parsedArguments.label === 'string') {
-      label = parsedArguments.label;
-    }
-
     let skipUI: boolean | undefined;
     if (typeof parsedArguments.skipUI === 'boolean') {
       skipUI = parsedArguments.skipUI;
@@ -130,7 +124,6 @@ export class ToolsExecutor {
 
     return {
       seconds: parsedArguments.seconds as number,
-      label,
       skipUI,
     };
   }
