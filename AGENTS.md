@@ -1,1 +1,2 @@
 - don't use ternary, use if instead
+- run npm run lint after changes
