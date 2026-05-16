@@ -43,8 +43,8 @@ export function ModelDropdown({ apiKey, value, onChange }: ModelDropdownProps): 
     setError(null);
 
     try {
-      const openAIClient = new OpenAIClient(apiKey);
-      const fetchedModels = await openAIClient.fetchModels();
+      const openAIClient = new OpenAIClient();
+      const fetchedModels = await openAIClient.fetchModels(apiKey);
       setModels(fetchedModels);
     } catch (fetchError) {
       if (fetchError instanceof Error && fetchError.message) {

@@ -1,8 +1,8 @@
 import OpenAI from 'openai';
 import type { FunctionTool, Response } from 'openai/resources/responses/responses';
 
-type CreateResponseArgs = {
-  model?: string;
+type RequestArgs = {
+  model: string;
   prompt: string;
   systemPrompt?: string;
   tools?: FunctionTool[];
@@ -15,16 +15,15 @@ export interface Model {
 }
 
 export class OpenAIClient {
-  private client: OpenAI;
-
-  constructor(apiKey: string) {
-    this.client = new OpenAI({
+  private createClient(apiKey: string): OpenAI {
+    return new OpenAI({
       apiKey,
       dangerouslyAllowBrowser: true,
     });
   }
 
-  request({ model, prompt, systemPrompt, tools }: CreateResponseArgs): Promise<Response> {
+  request(apiKey: string, { model, prompt, systemPrompt, tools }: RequestArgs): Promise<Response> {
+    const client = this.createClient(apiKey);
     const input = [];
 
     if (systemPrompt) {
@@ -39,15 +38,16 @@ export class OpenAIClient {
       content: [{ type: 'input_text' as const, text: prompt }],
     });
 
-    return this.client.responses.create({
+    return client.responses.create({
       model,
       input,
       tools,
     });
   }
 
-  async fetchModels(): Promise<Model[]> {
-    const resp = await this.client.models.list();
+  async fetchModels(apiKey: string): Promise<Model[]> {
+    const client = this.createClient(apiKey);
+    const resp = await client.models.list();
 
     return resp.data.map((model) => {
       return {

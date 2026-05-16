@@ -1,10 +1,6 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 
-import { AppService } from '@/lib/app-service';
-import { Clock } from '@/lib/clock';
-import { OpenAIClient } from '@/lib/openai-client';
-import { ToolsExecutor } from '@/lib/tools-executor';
-import type { RootState } from '@/store';
+import { getAppService, type RootState } from '@/store';
 
 type RequestState = {
   isLoading: boolean;
@@ -18,15 +14,7 @@ const initialState: RequestState = {
   toolCallsDebug: '',
 };
 
-function createAppService(apiKey: string) {
-  const clock = new Clock();
-  const toolsExecutor = new ToolsExecutor(clock);
-  const openAIClient = new OpenAIClient(apiKey);
-
-  return new AppService(openAIClient, toolsExecutor);
-}
-
-function getErrorMessage(error: unknown) {
+function getErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
     return error.message;
   }
@@ -37,15 +25,18 @@ function getErrorMessage(error: unknown) {
 export const sendRequest = createAsyncThunk<string, { prompt: string }, { state: RootState; rejectValue: string }>(
   'request/send',
   async ({ prompt }, { getState, rejectWithValue }) => {
-    const { openAIAPIKey } = getState().settings;
+    const { openAIAPIKey, model } = getState().settings;
 
     if (!openAIAPIKey) {
       return rejectWithValue('OpenAI API key is not set.');
     }
 
+    if (!model) {
+      return rejectWithValue('Model is not set.');
+    }
+
     try {
-      const appService = createAppService(openAIAPIKey);
-      const toolCalls = await appService.request(prompt);
+      const toolCalls = await getAppService().request(openAIAPIKey, model, prompt);
 
       return JSON.stringify(toolCalls, null, 2);
     } catch (error) {

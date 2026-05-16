@@ -9,8 +9,9 @@ export class AppService {
     private toolsExecutor: ToolsExecutor,
   ) {}
 
-  async request(prompt: string): Promise<ResponseFunctionToolCall[]> {
-    const response = await this.openAIClient.request({
+  async request(apiKey: string, model: string, prompt: string): Promise<ResponseFunctionToolCall[]> {
+    const response = await this.openAIClient.request(apiKey, {
+      model,
       prompt,
       tools: this.toolsExecutor.tools,
     });
@@ -18,7 +19,7 @@ export class AppService {
     return this.toolsExecutor.execute(response);
   }
 
-  fetchModels(): Promise<Model[]> {
-    return this.openAIClient.fetchModels();
+  fetchModels(apiKey: string): Promise<Model[]> {
+    return this.openAIClient.fetchModels(apiKey);
   }
 }

@@ -1,6 +1,6 @@
 import type { FunctionTool, Response, ResponseFunctionToolCall } from 'openai/resources/responses/responses';
 
-import type { SetAlarmArguments } from '@/lib/clock';
+import type { SetAlarmArguments, SetTimerArguments } from '@/lib/clock';
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -25,11 +25,28 @@ export class ToolsExecutor {
         additionalProperties: false,
       },
     },
+    {
+      type: 'function',
+      name: 'set_timer',
+      description: 'Start a timer in the device clock app.',
+      strict: true,
+      parameters: {
+        type: 'object',
+        properties: {
+          seconds: { type: 'number' },
+          label: { type: ['string', 'null'] },
+          skipUI: { type: ['boolean', 'null'] },
+        },
+        required: ['seconds', 'label', 'skipUI'],
+        additionalProperties: false,
+      },
+    },
   ];
 
   constructor(
     private clock: {
       setAlarm(arguments_: SetAlarmArguments): Promise<void>;
+      setTimer(arguments_: SetTimerArguments): Promise<void>;
     },
   ) {}
 
@@ -61,6 +78,11 @@ export class ToolsExecutor {
       return;
     }
 
+    if (toolCall.name === 'set_timer') {
+      await this.clock.setTimer(this.parseSetTimerArguments(toolCall.arguments));
+      return;
+    }
+
     throw new Error(`Unknown tool: ${toolCall.name}`);
   }
 
@@ -84,6 +106,30 @@ export class ToolsExecutor {
     return {
       hour: parsedArguments.hour as number,
       minute: parsedArguments.minute as number,
+      label,
+      skipUI,
+    };
+  }
+
+  private parseSetTimerArguments(argumentsJSON: string): SetTimerArguments {
+    const parsedArguments: unknown = JSON.parse(argumentsJSON);
+
+    if (!isObject(parsedArguments)) {
+      throw new Error('Tool arguments must be a JSON object.');
+    }
+
+    let label: string | undefined;
+    if (typeof parsedArguments.label === 'string') {
+      label = parsedArguments.label;
+    }
+
+    let skipUI: boolean | undefined;
+    if (typeof parsedArguments.skipUI === 'boolean') {
+      skipUI = parsedArguments.skipUI;
+    }
+
+    return {
+      seconds: parsedArguments.seconds as number,
       label,
       skipUI,
     };
