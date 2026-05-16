@@ -1,34 +1,39 @@
 import React, { useEffect } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, TextInput } from 'react-native';
+import { Pressable, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ModelDropdown } from '@/components/model-dropdown';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { clearSettingsError, loadSettings, saveSettings, setOpenAIAPIKey } from '@/store/settings';
+import { clearSettingsError, loadSettings, saveSettings, setModel, setOpenAIAPIKey } from '@/store/settings';
 
-export default function SettingsScreen() {
+export default function SettingsScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const dispatch = useAppDispatch();
-  const { openAIAPIKey, isLoading, error } = useAppSelector((state) => state.settings);
+  const { openAIAPIKey, model, isLoading, error } = useAppSelector((state) => state.settings);
 
   useEffect(() => {
     dispatch(loadSettings());
   }, [dispatch]);
 
-  function handleSave() {
-    dispatch(saveSettings({ openAIAPIKey }));
+  function handleSave(): void {
+    dispatch(saveSettings({ openAIAPIKey, model }));
   }
 
-  function handleChangeOpenAIAPIKey(value: string) {
+  function handleChangeOpenAIAPIKey(value: string): void {
     if (error) {
       dispatch(clearSettingsError());
     }
 
     dispatch(setOpenAIAPIKey(value));
+  }
+
+  function handleSelectModel(value: string): void {
+    dispatch(setModel(value));
   }
 
   return (
@@ -43,41 +48,35 @@ export default function SettingsScreen() {
         ]}>
         <ThemedView type="backgroundElement" style={styles.card}>
           <ThemedText type="smallBold">OpenAI API key</ThemedText>
-          {isLoading ? (
-            <ActivityIndicator color={theme.text} />
-          ) : (
-            <>
-              <TextInput
-                autoCapitalize="none"
-                autoCorrect={false}
-                onChangeText={handleChangeOpenAIAPIKey}
-                placeholder="sk-..."
-                placeholderTextColor={theme.textSecondary}
-                secureTextEntry
-                style={[
-                  styles.input,
-                  {
-                    color: theme.text,
-                    borderColor: theme.backgroundSelected,
-                  },
-                ]}
-                value={openAIAPIKey}
-              />
-              <Pressable
-                onPress={handleSave}
-                style={({ pressed }) => [
-                  styles.button,
-                  { backgroundColor: theme.text, opacity: pressed || isLoading ? 0.75 : 1 },
-                ]}
-                disabled={isLoading}>
-                <ThemedText style={[styles.buttonText, { color: theme.background }]}>
-                  {isLoading ? 'Saving...' : 'Save'}
-                </ThemedText>
-              </Pressable>
-            </>
-          )}
+          <TextInput
+            autoCapitalize="none"
+            autoCorrect={false}
+            onChangeText={handleChangeOpenAIAPIKey}
+            placeholder="sk-..."
+            placeholderTextColor={theme.textSecondary}
+            secureTextEntry
+            style={[
+              styles.input,
+              {
+                color: theme.text,
+                borderColor: theme.backgroundSelected,
+              },
+            ]}
+            value={openAIAPIKey}
+          />
           {error ? <ThemedText type="small">{error}</ThemedText> : null}
+          <ThemedText type="smallBold">Model</ThemedText>
+          <ModelDropdown apiKey={openAIAPIKey} value={model} onChange={handleSelectModel} />
         </ThemedView>
+        <Pressable
+          onPress={handleSave}
+          style={({ pressed }) => [
+            styles.button,
+            { backgroundColor: theme.text, opacity: pressed || isLoading ? 0.75 : 1 },
+          ]}
+          disabled={isLoading}>
+          <ThemedText style={[styles.buttonText, { color: theme.background }]}>Save</ThemedText>
+        </Pressable>
       </SafeAreaView>
     </ThemedView>
   );

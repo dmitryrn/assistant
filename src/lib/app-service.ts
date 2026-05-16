@@ -1,6 +1,6 @@
 import type { ResponseFunctionToolCall } from 'openai/resources/responses/responses';
 
-import { OpenAIClient } from '@/lib/openai-client';
+import { OpenAIClient, type Model } from '@/lib/openai-client';
 import { ToolsExecutor } from '@/lib/tools-executor';
 
 export class AppService {
@@ -16,5 +16,9 @@ export class AppService {
     });
 
     return this.toolsExecutor.execute(response);
+  }
+
+  fetchModels(): Promise<Model[]> {
+    return this.openAIClient.fetchModels();
   }
 }

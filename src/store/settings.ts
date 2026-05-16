@@ -2,20 +2,23 @@ import * as SecureStore from 'expo-secure-store';
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 const OPENAI_API_KEY_STORAGE_KEY = 'settings.openaiApiKey';
+const MODEL_STORAGE_KEY = 'settings.model';
 
 type SettingsState = {
   openAIAPIKey: string;
+  model: string;
   isLoading: boolean;
   error: string | null;
 };
 
 const initialState: SettingsState = {
   openAIAPIKey: '',
+  model: '',
   isLoading: false,
   error: null,
 };
 
-function getErrorMessage(error: unknown) {
+function getErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
     return error.message;
   }
@@ -24,30 +27,33 @@ function getErrorMessage(error: unknown) {
 }
 
 export const loadSettings = createAsyncThunk<
-  { openAIAPIKey: string },
+  { openAIAPIKey: string; model: string },
   void,
   { rejectValue: string }
 >('settings/load', async (_, { rejectWithValue }) => {
   try {
     const openAIAPIKey = (await SecureStore.getItemAsync(OPENAI_API_KEY_STORAGE_KEY)) ?? '';
+    const model = (await SecureStore.getItemAsync(MODEL_STORAGE_KEY)) ?? '';
 
-    return { openAIAPIKey };
+    return { openAIAPIKey, model };
   } catch (error) {
     return rejectWithValue(getErrorMessage(error));
   }
 });
 
 export const saveSettings = createAsyncThunk<
-  { openAIAPIKey: string },
-  { openAIAPIKey: string },
+  { openAIAPIKey: string; model: string },
+  { openAIAPIKey: string; model: string },
   { rejectValue: string }
->('settings/save', async ({ openAIAPIKey }, { rejectWithValue }) => {
+>('settings/save', async ({ openAIAPIKey, model }, { rejectWithValue }) => {
   try {
     const trimmedKey = openAIAPIKey.trim();
     await SecureStore.setItemAsync(OPENAI_API_KEY_STORAGE_KEY, trimmedKey);
+    await SecureStore.setItemAsync(MODEL_STORAGE_KEY, model);
 
     return {
       openAIAPIKey: trimmedKey,
+      model,
     };
   } catch (error) {
     return rejectWithValue(getErrorMessage(error));
@@ -60,6 +66,9 @@ const settingsSlice = createSlice({
   reducers: {
     setOpenAIAPIKey(state, action: PayloadAction<string>) {
       state.openAIAPIKey = action.payload;
+    },
+    setModel(state, action: PayloadAction<string>) {
+      state.model = action.payload;
     },
     clearSettingsError(state) {
       state.error = null;
@@ -74,6 +83,7 @@ const settingsSlice = createSlice({
       .addCase(loadSettings.fulfilled, (state, action) => {
         state.isLoading = false;
         state.openAIAPIKey = action.payload.openAIAPIKey;
+        state.model = action.payload.model;
       })
       .addCase(loadSettings.rejected, (state, action) => {
         state.isLoading = false;
@@ -87,6 +97,7 @@ const settingsSlice = createSlice({
       .addCase(saveSettings.fulfilled, (state, action) => {
         state.isLoading = false;
         state.openAIAPIKey = action.payload.openAIAPIKey;
+        state.model = action.payload.model;
       })
       .addCase(saveSettings.rejected, (state, action) => {
         state.isLoading = false;
@@ -95,6 +106,6 @@ const settingsSlice = createSlice({
   },
 });
 
-export const { clearSettingsError, setOpenAIAPIKey } = settingsSlice.actions;
+export const { clearSettingsError, setOpenAIAPIKey, setModel } = settingsSlice.actions;
 
 export default settingsSlice.reducer;

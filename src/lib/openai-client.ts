@@ -1,7 +1,5 @@
 import OpenAI from 'openai';
-import type { FunctionTool } from 'openai/resources/responses/responses';
-
-const DEFAULT_MODEL = 'gpt-4.1-mini';
+import type { FunctionTool, Response } from 'openai/resources/responses/responses';
 
 type CreateResponseArgs = {
   model?: string;
@@ -9,6 +7,12 @@ type CreateResponseArgs = {
   systemPrompt?: string;
   tools?: FunctionTool[];
 };
+
+export interface Model {
+  id: string;
+  created: number;
+  ownedBy: string;
+}
 
 export class OpenAIClient {
   private client: OpenAI;
@@ -20,7 +24,7 @@ export class OpenAIClient {
     });
   }
 
-  request({ model = DEFAULT_MODEL, prompt, systemPrompt, tools }: CreateResponseArgs) {
+  request({ model, prompt, systemPrompt, tools }: CreateResponseArgs): Promise<Response> {
     const input = [];
 
     if (systemPrompt) {
@@ -39,6 +43,18 @@ export class OpenAIClient {
       model,
       input,
       tools,
+    });
+  }
+
+  async fetchModels(): Promise<Model[]> {
+    const resp = await this.client.models.list();
+
+    return resp.data.map((model) => {
+      return {
+        id: model.id,
+        created: model.created,
+        ownedBy: model.owned_by,
+      };
     });
   }
 }
