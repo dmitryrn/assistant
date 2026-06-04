@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Pressable, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -8,6 +8,8 @@ import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { clearSettingsError, loadSettings, saveSettings, setModel, setOpenAIAPIKey } from '@/store/settings';
+
+import { loadLlamaModelInfo } from 'llama.rn';
 
 import { ModelDropdown } from './model-dropdown';
 
@@ -36,6 +38,30 @@ export default function SettingsScreen(): React.JSX.Element {
   function handleSelectModel(value: string): void {
     dispatch(setModel(value));
   }
+
+  const handlePickModelFile = useCallback(async (): Promise<void> => {
+    try {
+      const { File } = await import('expo-file-system');
+      const { copyAsync, documentDirectory } = await import('expo-file-system/legacy');
+
+      const file = await File.pickFileAsync();
+
+      if (!file) {
+        return;
+      }
+
+      const pickedFile = Array.isArray(file) ? file[0] : file;
+      const destPath = documentDirectory + pickedFile.name;
+
+      await copyAsync({ from: pickedFile.uri, to: destPath });
+
+      const info = (await loadLlamaModelInfo(destPath)) as Record<string, unknown>;
+      console.log('Model info:', JSON.stringify(info, null, 2));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.log('Model info error:', message);
+    }
+  }, []);
 
   return (
     <ThemedView style={styles.container}>
@@ -69,6 +95,19 @@ export default function SettingsScreen(): React.JSX.Element {
           <ThemedText type="smallBold">Model</ThemedText>
           <ModelDropdown apiKey={openAIAPIKey} value={model} onChange={handleSelectModel} />
         </ThemedView>
+        <Pressable
+          onPress={handlePickModelFile}
+          style={({ pressed }) => [
+            styles.button,
+            {
+              backgroundColor: theme.backgroundSelected,
+              opacity: pressed ? 0.75 : 1,
+            },
+          ]}>
+          <ThemedText style={[styles.buttonText, { color: theme.text }]}>
+            Load model file
+          </ThemedText>
+        </Pressable>
         <Pressable
           onPress={handleSave}
           style={({ pressed }) => [
