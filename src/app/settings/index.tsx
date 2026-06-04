@@ -74,7 +74,9 @@ export default function SettingsScreen(): React.JSX.Element {
           />
         )}
         {provider === 'local' && <LocalPane />}
+
         <ThemedView style={styles.spacer} />
+
         <Pressable
           onPress={handleSave}
           style={({ pressed }) => [
