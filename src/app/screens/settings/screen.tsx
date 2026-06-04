@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -7,7 +7,7 @@ import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { loadSettings, saveSettings, setModel, setOpenAIAPIKey } from '@/store/settings';
+import { loadSettings, saveSettings, setModel } from '@/store/settings';
 
 import { loadLlamaModelInfo } from 'llama.rn';
 
@@ -18,17 +18,18 @@ export default function SettingsScreen(): React.JSX.Element {
   const theme = useTheme();
   const dispatch = useAppDispatch();
   const { openAIAPIKey, model, isLoading } = useAppSelector((state) => state.settings);
+  const [localOpenAIAPIKey, setLocalOpenAIAPIKey] = useState(openAIAPIKey);
 
   useEffect(() => {
     dispatch(loadSettings());
   }, [dispatch]);
 
-  function handleSave(): void {
-    dispatch(saveSettings({ openAIAPIKey, model }));
-  }
+  useEffect(() => {
+    setLocalOpenAIAPIKey(openAIAPIKey);
+  }, [openAIAPIKey]);
 
-  function handleChangeOpenAIAPIKey(value: string): void {
-    dispatch(setOpenAIAPIKey(value));
+  function handleSave(): void {
+    dispatch(saveSettings({ openAIAPIKey: localOpenAIAPIKey, model }));
   }
 
   function handleSelectModel(value: string): void {
@@ -74,7 +75,7 @@ export default function SettingsScreen(): React.JSX.Element {
           <TextInput
             autoCapitalize="none"
             autoCorrect={false}
-            onChangeText={handleChangeOpenAIAPIKey}
+            onChangeText={setLocalOpenAIAPIKey}
             placeholder="sk-..."
             placeholderTextColor={theme.textSecondary}
             secureTextEntry
@@ -85,7 +86,7 @@ export default function SettingsScreen(): React.JSX.Element {
                 borderColor: theme.backgroundSelected,
               },
             ]}
-            value={openAIAPIKey}
+            value={localOpenAIAPIKey}
           />
 
           <ThemedText type="smallBold">Model</ThemedText>
