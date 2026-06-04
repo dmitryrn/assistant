@@ -13,7 +13,7 @@ export default function AppTabs(): React.JSX.Element {
       backgroundColor={colors.background}
       indicatorColor={colors.backgroundElement}
       labelStyle={{ selected: { color: colors.text } }}>
-      <NativeTabs.Trigger name="screens/main/screen">
+      <NativeTabs.Trigger name="main/index">
         <NativeTabs.Trigger.Label>Main</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           src={require('@/assets/images/tabIcons/home.png')}
@@ -21,7 +21,7 @@ export default function AppTabs(): React.JSX.Element {
         />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="screens/settings/screen">
+      <NativeTabs.Trigger name="settings/index">
         <NativeTabs.Trigger.Label>Settings</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           src={require('@/assets/images/tabIcons/explore.png')}

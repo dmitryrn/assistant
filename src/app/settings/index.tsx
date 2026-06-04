@@ -4,14 +4,13 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { ModelDropdown } from '@/components/model-dropdown';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { loadSettings, saveSettings, setModel } from '@/store/settings';
 
 import { loadLlamaModelInfo } from 'llama.rn';
-
-import { ModelDropdown } from './model-dropdown';
 
 export default function SettingsScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
