@@ -1,4 +1,4 @@
 - don't use ternary in logic, use if instead
 - using ternary is fine in JSX
 - always add return type to functions
-- run npm run lint after changes
+- run npm run lint and test after making changes

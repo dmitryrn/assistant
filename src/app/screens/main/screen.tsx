@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, TextInput } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SymbolView } from 'expo-symbols';
+import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
+} from 'expo-speech-recognition';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -15,11 +20,59 @@ export default function HomeScreen() {
   const theme = useTheme();
   const dispatch = useAppDispatch();
   const [prompt, setPrompt] = useState('');
+  const [listening, setListening] = useState(false);
+  const [permError, setPermError] = useState('');
   const { isLoading, error, toolCallsDebug } = useAppSelector((state) => state.request);
+
+  useSpeechRecognitionEvent('start', () => setListening(true));
+  useSpeechRecognitionEvent('end', () => setListening(false));
+  useSpeechRecognitionEvent('result', (event) => {
+    const text = event.results[0]?.transcript;
+    if (text) setPrompt(text);
+  });
+  useSpeechRecognitionEvent('error', (event) => {
+    console.log('Speech error:', event.error, event.message);
+  });
 
   useEffect(() => {
     dispatch(loadSettings());
   }, [dispatch]);
+
+  async function handleMicPress() {
+    setPermError('');
+
+    if (listening) {
+      ExpoSpeechRecognitionModule.stop();
+      return;
+    }
+
+    const status = await ExpoSpeechRecognitionModule.getPermissionsAsync();
+    if (status.granted) {
+      ExpoSpeechRecognitionModule.start({
+        lang: 'en-US',
+        interimResults: true,
+        continuous: false,
+      });
+      return;
+    }
+
+    if (!status.canAskAgain) {
+      setPermError('Microphone permission denied. Enable it in system settings.');
+      return;
+    }
+
+    const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    if (!result.granted) {
+      console.warn('Speech permissions not granted');
+      return;
+    }
+
+    ExpoSpeechRecognitionModule.start({
+      lang: 'en-US',
+      interimResults: true,
+      continuous: false,
+    });
+  }
 
   function handleSend() {
     dispatch(sendRequest({ prompt }));
@@ -50,20 +103,49 @@ export default function HomeScreen() {
             ]}
             value={prompt}
           />
-          <Pressable
-            onPress={handleSend}
-            style={({ pressed }) => [
-              styles.button,
-              {
-                backgroundColor: theme.text,
-                opacity: pressed || isLoading ? 0.75 : 1,
-              },
-            ]}
-            disabled={isLoading}>
-            <ThemedText style={[styles.buttonText, { color: theme.background }]}>
-              {isLoading ? 'Sending...' : 'Send request'}
+          <View style={styles.actionsRow}>
+            <Pressable
+              onPress={handleMicPress}
+              style={({ pressed }) => [
+                styles.micButton,
+                {
+                  backgroundColor: listening
+                    ? theme.backgroundSelected
+                    : theme.backgroundElement,
+                  opacity: pressed ? 0.75 : 1,
+                },
+              ]}>
+              <SymbolView
+                name={{
+                  ios: listening ? 'pause.fill' : 'play.fill',
+                  android: listening ? 'pause' : 'play_arrow',
+                  web: listening ? 'pause' : 'play_arrow',
+                }}
+                size={18}
+                weight="medium"
+                tintColor={theme.text}
+              />
+            </Pressable>
+            <Pressable
+              onPress={handleSend}
+              style={({ pressed }) => [
+                styles.sendButton,
+                {
+                  backgroundColor: theme.text,
+                  opacity: pressed || isLoading ? 0.75 : 1,
+                },
+              ]}
+              disabled={isLoading}>
+              <ThemedText style={[styles.buttonText, { color: theme.background }]}>
+                {isLoading ? 'Sending...' : 'Send request'}
+              </ThemedText>
+            </Pressable>
+          </View>
+          {permError ? (
+            <ThemedText type="small" style={{ color: theme.textSecondary }}>
+              {permError}
             </ThemedText>
-          </Pressable>
+          ) : null}
           {error ? <ThemedText type="small">{error}</ThemedText> : null}
           {toolCallsDebug ? (
             <ThemedView
@@ -123,7 +205,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
   },
-  button: {
+  actionsRow: {
+    flexDirection: 'row',
+    gap: Spacing.three,
+  },
+  micButton: {
+    width: 48,
+    height: 48,
+    borderRadius: Spacing.three,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendButton: {
+    flex: 1,
     minHeight: 48,
     borderRadius: Spacing.three,
     alignItems: 'center',
