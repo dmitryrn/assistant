@@ -1,17 +1,16 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import Toast from 'react-native-toast-message';
 
 import { getAppService } from '@/lib/get-app-service';
 import type { RootState } from '@/store';
 
 type RequestState = {
   isLoading: boolean;
-  error: string | null;
   toolCallsDebug: string;
 };
 
 const initialState: RequestState = {
   isLoading: false,
-  error: null,
   toolCallsDebug: '',
 };
 
@@ -56,7 +55,6 @@ const requestSlice = createSlice({
     builder
       .addCase(sendRequest.pending, (state) => {
         state.isLoading = true;
-        state.error = null;
         state.toolCallsDebug = '';
       })
       .addCase(sendRequest.fulfilled, (state, action) => {
@@ -66,7 +64,8 @@ const requestSlice = createSlice({
       .addCase(sendRequest.rejected, (state, action) => {
         state.isLoading = false;
         state.toolCallsDebug = '';
-        state.error = action.payload ?? action.error.message ?? 'Could not send request.';
+        const message = action.payload ?? action.error.message ?? 'Could not send request.';
+        Toast.show({ type: 'error', text1: 'Error', text2: message });
       });
   },
 });

@@ -7,6 +7,7 @@ import {
   useSpeechRecognitionEvent,
 } from 'expo-speech-recognition';
 
+import Toast from 'react-native-toast-message';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
@@ -21,8 +22,7 @@ export default function HomeScreen() {
   const dispatch = useAppDispatch();
   const [prompt, setPrompt] = useState('');
   const [listening, setListening] = useState(false);
-  const [permError, setPermError] = useState('');
-  const { isLoading, error, toolCallsDebug } = useAppSelector((state) => state.request);
+  const { isLoading, toolCallsDebug } = useAppSelector((state) => state.request);
 
   useSpeechRecognitionEvent('start', () => setListening(true));
   useSpeechRecognitionEvent('end', () => setListening(false));
@@ -31,7 +31,8 @@ export default function HomeScreen() {
     if (text) setPrompt(text);
   });
   useSpeechRecognitionEvent('error', (event) => {
-    console.log('Speech error:', event.error, event.message);
+    const message = event.message || event.error;
+    Toast.show({ type: 'error', text1: 'Speech Error', text2: message });
   });
 
   useEffect(() => {
@@ -39,8 +40,6 @@ export default function HomeScreen() {
   }, [dispatch]);
 
   async function handleMicPress() {
-    setPermError('');
-
     if (listening) {
       ExpoSpeechRecognitionModule.stop();
       return;
@@ -57,7 +56,6 @@ export default function HomeScreen() {
     }
 
     if (!status.canAskAgain) {
-      setPermError('Microphone permission denied. Enable it in system settings.');
       return;
     }
 
@@ -141,12 +139,7 @@ export default function HomeScreen() {
               </ThemedText>
             </Pressable>
           </View>
-          {permError ? (
-            <ThemedText type="small" style={{ color: theme.textSecondary }}>
-              {permError}
-            </ThemedText>
-          ) : null}
-          {error ? <ThemedText type="small">{error}</ThemedText> : null}
+
           {toolCallsDebug ? (
             <ThemedView
               style={[
