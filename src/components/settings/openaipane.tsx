@@ -39,7 +39,7 @@ export function OpenAIPane({
           {
             color: theme.text,
             borderColor: theme.backgroundSelected,
-            backgroundColor: '#fff',
+            backgroundColor: theme.backgroundSelected,
           },
         ]}
         value={apiKey}

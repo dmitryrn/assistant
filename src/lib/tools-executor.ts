@@ -1,4 +1,4 @@
-import type { FunctionTool, Response, ResponseFunctionToolCall } from 'openai/resources/responses/responses';
+import type { FunctionTool } from 'openai/resources/responses/responses';
 
 import type { SetAlarmArguments, SetTimerArguments } from '@/lib/clock';
 
@@ -49,29 +49,13 @@ export class ToolsExecutor {
     },
   ) {}
 
-  async execute(response: Response): Promise<ResponseFunctionToolCall[]> {
-    const toolCalls = this.getToolCalls(response);
-
+  async execute(toolCalls: AppToolCall[]): Promise<void> {
     for (const toolCall of toolCalls) {
       await this.executeToolCall(toolCall);
     }
-
-    return toolCalls;
   }
 
-  private getToolCalls(response: Response): ResponseFunctionToolCall[] {
-    const toolCalls: ResponseFunctionToolCall[] = [];
-
-    for (const item of response.output) {
-      if (item.type === 'function_call') {
-        toolCalls.push(item);
-      }
-    }
-
-    return toolCalls;
-  }
-
-  private async executeToolCall(toolCall: ResponseFunctionToolCall): Promise<void> {
+  private async executeToolCall(toolCall: AppToolCall): Promise<void> {
     if (toolCall.name === 'set_alarm') {
       await this.clock.setAlarm(this.parseSetAlarmArguments(toolCall.arguments));
       return;
@@ -128,3 +112,9 @@ export class ToolsExecutor {
     };
   }
 }
+
+export type AppToolCall = {
+  id: string;
+  name: string;
+  arguments: string;
+};

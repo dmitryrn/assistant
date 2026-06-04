@@ -25,7 +25,27 @@ function getErrorMessage(error: unknown): string {
 export const sendRequest = createAsyncThunk<string, { prompt: string }, { state: RootState; rejectValue: string }>(
   'request/send',
   async ({ prompt }, { getState, rejectWithValue }) => {
-    const { openAIAPIKey, openAIModel } = getState().settings;
+    const { localModelPath, localModelStatus, openAIAPIKey, openAIModel, provider } = getState().settings;
+
+    if (provider === 'local') {
+      if (!localModelPath) {
+        return rejectWithValue('Local model is not set.');
+      }
+
+      if (localModelStatus !== 'loaded') {
+        return rejectWithValue('Local model is not loaded.');
+      }
+
+      try {
+        const result = await getAppService().requestLocal(prompt);
+
+        return JSON.stringify(result.toolCalls, null, 2);
+      } catch (error) {
+        console.log(error);
+
+        return rejectWithValue(getErrorMessage(error));
+      }
+    }
 
     if (!openAIAPIKey) {
       return rejectWithValue('OpenAI API key is not set.');
@@ -36,9 +56,9 @@ export const sendRequest = createAsyncThunk<string, { prompt: string }, { state:
     }
 
     try {
-      const toolCalls = await getAppService().request(openAIAPIKey, openAIModel, prompt);
+      const result = await getAppService().requestOpenAI(openAIAPIKey, openAIModel, prompt);
 
-      return JSON.stringify(toolCalls, null, 2);
+      return JSON.stringify(result.toolCalls, null, 2);
     } catch (error) {
       console.log(error);
 

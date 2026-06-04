@@ -19,11 +19,15 @@ export function SelectDropdown<Value extends string>({
   const theme = useTheme();
 
   return (
-    <View style={[styles.container, { borderColor: theme.backgroundSelected, backgroundColor: '#fff' }]}>
+    <View
+      style={[
+        styles.container,
+        { borderColor: theme.backgroundSelected, backgroundColor: theme.backgroundSelected },
+      ]}>
       <Picker
         selectedValue={value}
         onValueChange={(itemValue: Value) => onChange(itemValue)}
-        style={[styles.picker, { color: theme.text }]}
+        style={[styles.picker, { color: theme.text, backgroundColor: theme.backgroundSelected }]}
         dropdownIconColor={theme.text}
       >
         {children}
