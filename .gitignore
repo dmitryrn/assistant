@@ -41,5 +41,6 @@ app-example
 # generated native folders
 /ios
 /android
+modules/@local/assist-intent/android/build/
 
 *.gguf

@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
@@ -16,10 +17,23 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { sendRequest } from '@/store/request';
 import { loadSettings } from '@/store/settings';
 
-export default function HomeScreen() {
+function getSearchParamValue(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) {
+    return value[0];
+  }
+
+  return value;
+}
+
+export default function HomeScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const dispatch = useAppDispatch();
+  const { assistIntentId, listen } = useLocalSearchParams<{
+    assistIntentId?: string;
+    listen?: string;
+  }>();
+  const handledAssistIntentId = useRef<string | undefined>(undefined);
   const [prompt, setPrompt] = useState('');
   const [listening, setListening] = useState(false);
   const { isLoading, toolCallsDebug } = useAppSelector((state) => state.request);
@@ -39,9 +53,8 @@ export default function HomeScreen() {
     dispatch(loadSettings());
   }, [dispatch]);
 
-  async function handleMicPress() {
+  const startSpeech = useCallback(async (): Promise<void> => {
     if (listening) {
-      ExpoSpeechRecognitionModule.stop();
       return;
     }
 
@@ -70,9 +83,38 @@ export default function HomeScreen() {
       interimResults: true,
       continuous: false,
     });
+  }, [listening]);
+
+  useEffect(() => {
+    const listenParam = getSearchParamValue(listen);
+    const assistIntentIdParam = getSearchParamValue(assistIntentId);
+
+    if (listenParam !== '1') {
+      return;
+    }
+
+    if (!assistIntentIdParam) {
+      return;
+    }
+
+    if (handledAssistIntentId.current === assistIntentIdParam) {
+      return;
+    }
+
+    handledAssistIntentId.current = assistIntentIdParam;
+    void startSpeech();
+  }, [assistIntentId, listen, startSpeech]);
+
+  async function handleMicPress(): Promise<void> {
+    if (listening) {
+      ExpoSpeechRecognitionModule.stop();
+      return;
+    }
+
+    await startSpeech();
   }
 
-  function handleSend() {
+  function handleSend(): void {
     dispatch(sendRequest({ prompt }));
   }
 
