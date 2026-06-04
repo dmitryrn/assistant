@@ -5,11 +5,38 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { loadLocalModel, setLocalModelPath } from '@/store/settings';
 
 import { loadLlamaModelInfo } from 'llama.rn';
 
+type PickedFile = {
+  name: string;
+  uri: string;
+};
+
+function getPickedFile(file: PickedFile | PickedFile[] | null): PickedFile | null {
+  if (!file) {
+    return null;
+  }
+
+  if (Array.isArray(file)) {
+    const pickedFile = file[0];
+
+    if (!pickedFile) {
+      return null;
+    }
+
+    return pickedFile;
+  }
+
+  return file;
+}
+
 export function LocalPane(): React.JSX.Element {
   const theme = useTheme();
+  const dispatch = useAppDispatch();
+  const { localModelPath, localModelStatus, localModelError, provider } = useAppSelector((state) => state.settings);
 
   const handlePickModelFile = useCallback(async (): Promise<void> => {
     try {
@@ -17,34 +44,24 @@ export function LocalPane(): React.JSX.Element {
       const { copyAsync, documentDirectory } = await import('expo-file-system/legacy');
 
       const file = await File.pickFileAsync();
+      const pickedFile = getPickedFile(file);
 
-      if (!file) {
+      if (!pickedFile) {
         return;
       }
 
-      if (Array.isArray(file)) {
-        const pickedFile = file[0];
+      const destPath = documentDirectory + pickedFile.name;
 
-        if (!pickedFile) {
-          return;
-        }
-
-        const destPath = documentDirectory + pickedFile.name;
-
-        await copyAsync({ from: pickedFile.uri, to: destPath });
-
-        const info = (await loadLlamaModelInfo(destPath)) as Record<string, unknown>;
-        console.log('Model info:', JSON.stringify(info, null, 2));
-
-        return;
-      }
-
-      const destPath = documentDirectory + file.name;
-
-      await copyAsync({ from: file.uri, to: destPath });
+      await copyAsync({ from: pickedFile.uri, to: destPath });
 
       const info = (await loadLlamaModelInfo(destPath)) as Record<string, unknown>;
       console.log('Model info:', JSON.stringify(info, null, 2));
+
+      dispatch(setLocalModelPath(destPath));
+
+      if (provider === 'local') {
+        dispatch(loadLocalModel(destPath));
+      }
     } catch (err) {
       let message = String(err);
 
@@ -54,7 +71,7 @@ export function LocalPane(): React.JSX.Element {
 
       console.log('Model info error:', message);
     }
-  }, []);
+  }, [dispatch, provider]);
 
   return (
     <ThemedView type="backgroundElement" style={styles.card}>
@@ -69,6 +86,9 @@ export function LocalPane(): React.JSX.Element {
         ]}>
         <ThemedText style={[styles.buttonText, { color: theme.text }]}>Load model file</ThemedText>
       </Pressable>
+      {localModelPath ? <ThemedText type="small">{localModelPath}</ThemedText> : null}
+      <ThemedText type="small">Local model: {localModelStatus}</ThemedText>
+      {localModelError ? <ThemedText type="small">{localModelError}</ThemedText> : null}
     </ThemedView>
   );
 }

@@ -14,8 +14,8 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   loadSettings,
   saveSettings,
+  selectProvider,
   setOpenAIModel,
-  setProvider,
   type SettingsProvider,
 } from '@/store/settings';
 
@@ -23,7 +23,9 @@ export default function SettingsScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const dispatch = useAppDispatch();
-  const { openAIAPIKey, openAIModel, provider, isLoading } = useAppSelector((state) => state.settings);
+  const { openAIAPIKey, openAIModel, localModelPath, provider, isLoading } = useAppSelector(
+    (state) => state.settings,
+  );
   const [localOpenAIAPIKey, setLocalOpenAIAPIKey] = useState(openAIAPIKey);
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export default function SettingsScreen(): React.JSX.Element {
   }, [openAIAPIKey]);
 
   function handleSave(): void {
-    dispatch(saveSettings({ openAIAPIKey: localOpenAIAPIKey, openAIModel, provider }));
+    dispatch(saveSettings({ openAIAPIKey: localOpenAIAPIKey, openAIModel, localModelPath, provider }));
   }
 
   function handleSelectModel(value: string): void {
@@ -43,7 +45,7 @@ export default function SettingsScreen(): React.JSX.Element {
   }
 
   function handleSelectProvider(value: SettingsProvider): void {
-    dispatch(setProvider(value));
+    dispatch(selectProvider(value));
   }
 
   return (
