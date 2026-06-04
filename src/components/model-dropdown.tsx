@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import Toast from 'react-native-toast-message';
 
 import { ThemedText } from '@/components/themed-text';
+import { SelectDropdown } from '@/components/ui/select-dropdown';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { OpenAIClient, type Model } from '@/lib/openai-client';
@@ -52,31 +53,16 @@ export function ModelDropdown({ apiKey, value, onChange }: ModelDropdownProps): 
   }
 
   return (
-    <View style={[styles.pickerContainer, { borderColor: theme.backgroundSelected }]}>
-      <Picker
-        selectedValue={value || ''}
-        onValueChange={(itemValue: string) => onChange(itemValue)}
-        style={[styles.picker, { color: theme.text }]}
-        dropdownIconColor={theme.text}
-      >
-        <Picker.Item label="Select a model..." value="" enabled={false} />
-        {models.map((model) => (
-          <Picker.Item key={model.id} label={model.id} value={model.id} />
-        ))}
-      </Picker>
-    </View>
+    <SelectDropdown value={value} onChange={onChange}>
+      <Picker.Item label="Select a model..." value="" enabled={false} />
+      {models.map((model) => (
+        <Picker.Item key={model.id} label={model.id} value={model.id} />
+      ))}
+    </SelectDropdown>
   );
 }
 
 const styles = StyleSheet.create({
-  pickerContainer: {
-    borderWidth: 1,
-    borderRadius: Spacing.three,
-    overflow: 'hidden',
-  },
-  picker: {
-    minHeight: 52,
-  },
   loader: {
     paddingVertical: Spacing.three,
   },

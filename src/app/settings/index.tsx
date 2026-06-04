@@ -1,14 +1,22 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Picker } from '@react-native-picker/picker';
 import { Pressable, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { ModelDropdown } from '@/components/model-dropdown';
+import { SelectDropdown } from '@/components/ui/select-dropdown';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { loadSettings, saveSettings, setModel } from '@/store/settings';
+import {
+  loadSettings,
+  saveSettings,
+  setOpenAIModel,
+  setProvider,
+  type SettingsProvider,
+} from '@/store/settings';
 
 import { loadLlamaModelInfo } from 'llama.rn';
 
@@ -16,7 +24,7 @@ export default function SettingsScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const dispatch = useAppDispatch();
-  const { openAIAPIKey, model, isLoading } = useAppSelector((state) => state.settings);
+  const { openAIAPIKey, openAIModel, provider, isLoading } = useAppSelector((state) => state.settings);
   const [localOpenAIAPIKey, setLocalOpenAIAPIKey] = useState(openAIAPIKey);
 
   useEffect(() => {
@@ -28,11 +36,15 @@ export default function SettingsScreen(): React.JSX.Element {
   }, [openAIAPIKey]);
 
   function handleSave(): void {
-    dispatch(saveSettings({ openAIAPIKey: localOpenAIAPIKey, model }));
+    dispatch(saveSettings({ openAIAPIKey: localOpenAIAPIKey, openAIModel, provider }));
   }
 
   function handleSelectModel(value: string): void {
-    dispatch(setModel(value));
+    dispatch(setOpenAIModel(value));
+  }
+
+  function handleSelectProvider(value: SettingsProvider): void {
+    dispatch(setProvider(value));
   }
 
   const handlePickModelFile = useCallback(async (): Promise<void> => {
@@ -70,40 +82,52 @@ export default function SettingsScreen(): React.JSX.Element {
           },
         ]}>
         <ThemedView type="backgroundElement" style={styles.card}>
-          <ThemedText type="smallBold">OpenAI API key</ThemedText>
-          <TextInput
-            autoCapitalize="none"
-            autoCorrect={false}
-            onChangeText={setLocalOpenAIAPIKey}
-            placeholder="sk-..."
-            placeholderTextColor={theme.textSecondary}
-            secureTextEntry
-            style={[
-              styles.input,
-              {
-                color: theme.text,
-                borderColor: theme.backgroundSelected,
-              },
-            ]}
-            value={localOpenAIAPIKey}
-          />
-
-          <ThemedText type="smallBold">Model</ThemedText>
-          <ModelDropdown apiKey={openAIAPIKey} value={model} onChange={handleSelectModel} />
+          <ThemedText type="smallBold">Provider</ThemedText>
+          <SelectDropdown value={provider} onChange={handleSelectProvider}>
+            <Picker.Item label="OpenAI" value="openai" />
+            <Picker.Item label="Local" value="local" />
+          </SelectDropdown>
         </ThemedView>
-        <Pressable
-          onPress={handlePickModelFile}
-          style={({ pressed }) => [
-            styles.button,
-            {
-              backgroundColor: theme.backgroundSelected,
-              opacity: pressed ? 0.75 : 1,
-            },
-          ]}>
-          <ThemedText style={[styles.buttonText, { color: theme.text }]}>
-            Load model file
-          </ThemedText>
-        </Pressable>
+
+        {provider === 'openai' && (
+          <ThemedView type="backgroundElement" style={styles.card}>
+            <ThemedText type="smallBold">OpenAI API key</ThemedText>
+            <TextInput
+              autoCapitalize="none"
+              autoCorrect={false}
+              onChangeText={setLocalOpenAIAPIKey}
+              placeholder="sk-..."
+              placeholderTextColor={theme.textSecondary}
+              secureTextEntry
+              style={[
+                styles.input,
+                {
+                  color: theme.text,
+                  borderColor: theme.backgroundSelected,
+                  backgroundColor: '#fff',
+                },
+              ]}
+              value={localOpenAIAPIKey}
+            />
+
+            <ThemedText type="smallBold">Model</ThemedText>
+            <ModelDropdown apiKey={openAIAPIKey} value={openAIModel} onChange={handleSelectModel} />
+          </ThemedView>
+        )}
+        {provider === 'local' && (
+          <Pressable
+            onPress={handlePickModelFile}
+            style={({ pressed }) => [
+              styles.button,
+              {
+                backgroundColor: theme.backgroundSelected,
+                opacity: pressed ? 0.75 : 1,
+              },
+            ]}>
+            <ThemedText style={[styles.buttonText, { color: theme.text }]}>Load model file</ThemedText>
+          </Pressable>
+        )}
+        <ThemedView style={styles.spacer} />
         <Pressable
           onPress={handleSave}
           style={({ pressed }) => [
@@ -144,6 +168,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.three,
     fontSize: 16,
+  },
+  spacer: {
+    flex: 1,
   },
   button: {
     minHeight: 48,

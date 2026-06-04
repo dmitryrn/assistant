@@ -25,18 +25,18 @@ function getErrorMessage(error: unknown): string {
 export const sendRequest = createAsyncThunk<string, { prompt: string }, { state: RootState; rejectValue: string }>(
   'request/send',
   async ({ prompt }, { getState, rejectWithValue }) => {
-    const { openAIAPIKey, model } = getState().settings;
+    const { openAIAPIKey, openAIModel } = getState().settings;
 
     if (!openAIAPIKey) {
       return rejectWithValue('OpenAI API key is not set.');
     }
 
-    if (!model) {
+    if (!openAIModel) {
       return rejectWithValue('Model is not set.');
     }
 
     try {
-      const toolCalls = await getAppService().request(openAIAPIKey, model, prompt);
+      const toolCalls = await getAppService().request(openAIAPIKey, openAIModel, prompt);
 
       return JSON.stringify(toolCalls, null, 2);
     } catch (error) {
