@@ -1,11 +1,12 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Picker } from '@react-native-picker/picker';
-import { Pressable, StyleSheet, TextInput } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { LocalPane } from '@/components/settings/localpane';
+import { OpenAIPane } from '@/components/settings/openaipane';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { ModelDropdown } from '@/components/model-dropdown';
 import { SelectDropdown } from '@/components/ui/select-dropdown';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -17,8 +18,6 @@ import {
   setProvider,
   type SettingsProvider,
 } from '@/store/settings';
-
-import { loadLlamaModelInfo } from 'llama.rn';
 
 export default function SettingsScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
@@ -47,30 +46,6 @@ export default function SettingsScreen(): React.JSX.Element {
     dispatch(setProvider(value));
   }
 
-  const handlePickModelFile = useCallback(async (): Promise<void> => {
-    try {
-      const { File } = await import('expo-file-system');
-      const { copyAsync, documentDirectory } = await import('expo-file-system/legacy');
-
-      const file = await File.pickFileAsync();
-
-      if (!file) {
-        return;
-      }
-
-      const pickedFile = Array.isArray(file) ? file[0] : file;
-      const destPath = documentDirectory + pickedFile.name;
-
-      await copyAsync({ from: pickedFile.uri, to: destPath });
-
-      const info = (await loadLlamaModelInfo(destPath)) as Record<string, unknown>;
-      console.log('Model info:', JSON.stringify(info, null, 2));
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.log('Model info error:', message);
-    }
-  }, []);
-
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView
@@ -90,43 +65,15 @@ export default function SettingsScreen(): React.JSX.Element {
         </ThemedView>
 
         {provider === 'openai' && (
-          <ThemedView type="backgroundElement" style={styles.card}>
-            <ThemedText type="smallBold">OpenAI API key</ThemedText>
-            <TextInput
-              autoCapitalize="none"
-              autoCorrect={false}
-              onChangeText={setLocalOpenAIAPIKey}
-              placeholder="sk-..."
-              placeholderTextColor={theme.textSecondary}
-              secureTextEntry
-              style={[
-                styles.input,
-                {
-                  color: theme.text,
-                  borderColor: theme.backgroundSelected,
-                  backgroundColor: '#fff',
-                },
-              ]}
-              value={localOpenAIAPIKey}
-            />
-
-            <ThemedText type="smallBold">Model</ThemedText>
-            <ModelDropdown apiKey={openAIAPIKey} value={openAIModel} onChange={handleSelectModel} />
-          </ThemedView>
+          <OpenAIPane
+            apiKey={localOpenAIAPIKey}
+            savedApiKey={openAIAPIKey}
+            model={openAIModel}
+            onChangeApiKey={setLocalOpenAIAPIKey}
+            onChangeModel={handleSelectModel}
+          />
         )}
-        {provider === 'local' && (
-          <Pressable
-            onPress={handlePickModelFile}
-            style={({ pressed }) => [
-              styles.button,
-              {
-                backgroundColor: theme.backgroundSelected,
-                opacity: pressed ? 0.75 : 1,
-              },
-            ]}>
-            <ThemedText style={[styles.buttonText, { color: theme.text }]}>Load model file</ThemedText>
-          </Pressable>
-        )}
+        {provider === 'local' && <LocalPane />}
         <ThemedView style={styles.spacer} />
         <Pressable
           onPress={handleSave}
@@ -160,14 +107,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.four,
     borderRadius: Spacing.four,
-  },
-  input: {
-    minHeight: 52,
-    borderWidth: 1,
-    borderRadius: Spacing.three,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.three,
-    fontSize: 16,
   },
   spacer: {
     flex: 1,
