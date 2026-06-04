@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -18,7 +19,14 @@ export function ModelDropdown({ apiKey, value, onChange }: ModelDropdownProps): 
   const [isOpen, setIsOpen] = useState(false);
   const [models, setModels] = useState<Model[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const prevLoading = useRef(isLoading);
+
+  useEffect(() => {
+    if (prevLoading.current && !isLoading && models.length === 0) {
+      Toast.show({ type: 'info', text1: 'No models found' });
+    }
+    prevLoading.current = isLoading;
+  }, [isLoading, models.length]);
 
   function handleToggle(): void {
     if (isOpen) {
@@ -35,23 +43,21 @@ export function ModelDropdown({ apiKey, value, onChange }: ModelDropdownProps): 
 
   async function fetchModels(): Promise<void> {
     if (!apiKey.trim()) {
-      setError('OpenAI API key is required to load models.');
+      Toast.show({ type: 'error', text1: 'Error', text2: 'OpenAI API key is required to load models.' });
       return;
     }
 
     setIsLoading(true);
-    setError(null);
 
     try {
       const openAIClient = new OpenAIClient();
       const fetchedModels = await openAIClient.fetchModels(apiKey);
       setModels(fetchedModels);
     } catch (fetchError) {
-      if (fetchError instanceof Error && fetchError.message) {
-        setError(fetchError.message);
-      } else {
-        setError('Could not load models.');
-      }
+      const message = fetchError instanceof Error && fetchError.message
+        ? fetchError.message
+        : 'Could not load models.';
+      Toast.show({ type: 'error', text1: 'Error', text2: message });
     } finally {
       setIsLoading(false);
     }
@@ -80,10 +86,7 @@ export function ModelDropdown({ apiKey, value, onChange }: ModelDropdownProps): 
       {isOpen ? (
         <ThemedView style={[styles.optionsList, { borderColor: theme.backgroundSelected }]}>
           {isLoading ? <ActivityIndicator color={theme.text} style={styles.optionsLoader} /> : null}
-          {error ? <ThemedText style={styles.optionMessage}>{error}</ThemedText> : null}
-          {!isLoading && !error && models.length === 0 ? (
-            <ThemedText style={styles.optionMessage}>No models found.</ThemedText>
-          ) : null}
+
           <ScrollView style={styles.optionsScroll} nestedScrollEnabled>
             {models.map((modelOption) => (
               <Pressable
@@ -133,10 +136,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
-  },
-  optionMessage: {
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.three,
   },
   optionsLoader: {
     paddingVertical: Spacing.three,

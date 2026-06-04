@@ -7,7 +7,7 @@ import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { clearSettingsError, loadSettings, saveSettings, setModel, setOpenAIAPIKey } from '@/store/settings';
+import { loadSettings, saveSettings, setModel, setOpenAIAPIKey } from '@/store/settings';
 
 import { loadLlamaModelInfo } from 'llama.rn';
 
@@ -17,7 +17,7 @@ export default function SettingsScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const dispatch = useAppDispatch();
-  const { openAIAPIKey, model, isLoading, error } = useAppSelector((state) => state.settings);
+  const { openAIAPIKey, model, isLoading } = useAppSelector((state) => state.settings);
 
   useEffect(() => {
     dispatch(loadSettings());
@@ -28,10 +28,6 @@ export default function SettingsScreen(): React.JSX.Element {
   }
 
   function handleChangeOpenAIAPIKey(value: string): void {
-    if (error) {
-      dispatch(clearSettingsError());
-    }
-
     dispatch(setOpenAIAPIKey(value));
   }
 
@@ -91,7 +87,7 @@ export default function SettingsScreen(): React.JSX.Element {
             ]}
             value={openAIAPIKey}
           />
-          {error ? <ThemedText type="small">{error}</ThemedText> : null}
+
           <ThemedText type="smallBold">Model</ThemedText>
           <ModelDropdown apiKey={openAIAPIKey} value={model} onChange={handleSelectModel} />
         </ThemedView>

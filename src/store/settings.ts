@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import Toast from 'react-native-toast-message';
 
 const OPENAI_API_KEY_STORAGE_KEY = 'settings.openaiApiKey';
 const MODEL_STORAGE_KEY = 'settings.model';
@@ -8,14 +9,12 @@ type SettingsState = {
   openAIAPIKey: string;
   model: string;
   isLoading: boolean;
-  error: string | null;
 };
 
 const initialState: SettingsState = {
   openAIAPIKey: '',
   model: '',
   isLoading: false,
-  error: null,
 };
 
 function getErrorMessage(error: unknown): string {
@@ -70,15 +69,11 @@ const settingsSlice = createSlice({
     setModel(state, action: PayloadAction<string>) {
       state.model = action.payload;
     },
-    clearSettingsError(state) {
-      state.error = null;
-    },
   },
   extraReducers: (builder) => {
     builder
       .addCase(loadSettings.pending, (state) => {
         state.isLoading = true;
-        state.error = null;
       })
       .addCase(loadSettings.fulfilled, (state, action) => {
         state.isLoading = false;
@@ -87,12 +82,12 @@ const settingsSlice = createSlice({
       })
       .addCase(loadSettings.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload ?? action.error.message ?? 'Could not load settings.';
+        const message = action.payload ?? action.error.message ?? 'Could not load settings.';
+        Toast.show({ type: 'error', text1: 'Error', text2: message });
       })
 
       .addCase(saveSettings.pending, (state) => {
         state.isLoading = true;
-        state.error = null;
       })
       .addCase(saveSettings.fulfilled, (state, action) => {
         state.isLoading = false;
@@ -101,11 +96,12 @@ const settingsSlice = createSlice({
       })
       .addCase(saveSettings.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload ?? action.error.message ?? 'Could not save settings.';
+        const message = action.payload ?? action.error.message ?? 'Could not save settings.';
+        Toast.show({ type: 'error', text1: 'Error', text2: message });
       });
   },
 });
 
-export const { clearSettingsError, setOpenAIAPIKey, setModel } = settingsSlice.actions;
+export const { setOpenAIAPIKey, setModel } = settingsSlice.actions;
 
 export default settingsSlice.reducer;
