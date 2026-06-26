@@ -1,4 +1,4 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
 import { router } from 'expo-router';
 import React, { useEffect } from 'react';
 import { Provider } from 'react-redux';
