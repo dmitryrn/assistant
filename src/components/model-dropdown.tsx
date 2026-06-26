@@ -38,9 +38,9 @@ export function ModelDropdown({ apiKey, value, onChange }: ModelDropdownProps): 
 
   useEffect(() => {
     if (apiKey.trim()) {
-      void fetchModels();
+      void Promise.resolve().then(fetchModels);
     } else {
-      setModels([]);
+      void Promise.resolve().then(() => setModels([]));
     }
   }, [fetchModels, apiKey]);
 

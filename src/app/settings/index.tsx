@@ -26,18 +26,15 @@ export default function SettingsScreen(): React.JSX.Element {
   const { openAIAPIKey, openAIModel, localModelPath, provider, isLoading } = useAppSelector(
     (state) => state.settings,
   );
-  const [localOpenAIAPIKey, setLocalOpenAIAPIKey] = useState(openAIAPIKey);
+  const [localOpenAIAPIKey, setLocalOpenAIAPIKey] = useState<string | null>(null);
+  const openAIAPIKeyValue = localOpenAIAPIKey ?? openAIAPIKey;
 
   useEffect(() => {
     dispatch(loadSettings());
   }, [dispatch]);
 
-  useEffect(() => {
-    setLocalOpenAIAPIKey(openAIAPIKey);
-  }, [openAIAPIKey]);
-
   function handleSave(): void {
-    dispatch(saveSettings({ openAIAPIKey: localOpenAIAPIKey, openAIModel, localModelPath, provider }));
+    dispatch(saveSettings({ openAIAPIKey: openAIAPIKeyValue, openAIModel, localModelPath, provider }));
   }
 
   function handleSelectModel(value: string): void {
@@ -68,7 +65,7 @@ export default function SettingsScreen(): React.JSX.Element {
 
         {provider === 'openai' && (
           <OpenAIPane
-            apiKey={localOpenAIAPIKey}
+            apiKey={openAIAPIKeyValue}
             savedApiKey={openAIAPIKey}
             model={openAIModel}
             onChangeApiKey={setLocalOpenAIAPIKey}
