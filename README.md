@@ -1,8 +1,8 @@
 # Main info
 ```
-"android": "expo run:android", -- dev
-"android:release": "expo run:android --variant release", -- install APK
-"android:apk": "expo prebuild --platform android && cd android && ./gradlew assembleRelease", -- build prod APK only
+"android": "expo run:android", -- run dev version
+"android:release": "expo run:android --variant release", -- run release version
+"android:apk": "expo prebuild --platform android && cd android && ./gradlew assembleRelease", -- build prod APK
 ```
 
 # Working with npm sandboxed
