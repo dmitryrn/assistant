@@ -1,0 +1,12 @@
+node_modules/
+.git/
+.expo/
+dist/
+web-build/
+ios/
+android/
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.tsbuildinfo
+*.gguf
