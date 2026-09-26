@@ -27,6 +27,38 @@ function getSearchParamValue(value: string | string[] | undefined): string | und
   return value;
 }
 
+function getAlarmCountdown(hour: string, minute: string, now: Date): string {
+  const alarmTime = new Date(now);
+  alarmTime.setHours(Number(hour), Number(minute), 0, 0);
+
+  if (alarmTime.getTime() <= now.getTime()) {
+    alarmTime.setDate(alarmTime.getDate() + 1);
+  }
+
+  const minutesUntilAlarm = Math.ceil((alarmTime.getTime() - now.getTime()) / 60_000);
+  const hours = Math.floor(minutesUntilAlarm / 60);
+  const minutes = minutesUntilAlarm % 60;
+  const duration: string[] = [];
+
+  if (hours > 0) {
+    let unit = 'hours';
+    if (hours === 1) {
+      unit = 'hour';
+    }
+    duration.push(`${hours} ${unit}`);
+  }
+
+  if (minutes > 0 || duration.length === 0) {
+    let unit = 'minutes';
+    if (minutes === 1) {
+      unit = 'minute';
+    }
+    duration.push(`${minutes} ${unit}`);
+  }
+
+  return `in ${duration.join(' ')}`;
+}
+
 type JevSuggestionCardProps = {
   suggestion: JevSuggestion;
   disabled: boolean;
@@ -38,6 +70,13 @@ function JevSuggestionCard({ suggestion, disabled }: JevSuggestionCardProps): Re
   const [alarmHour, setAlarmHour] = useState(String(suggestion.hour).padStart(2, '0'));
   const [alarmMinute, setAlarmMinute] = useState(String(suggestion.minute).padStart(2, '0'));
   const [timerMinutes, setTimerMinutes] = useState(String(suggestion.timerMinutes));
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 30_000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   function handleSetAlarm(): void {
     dispatch(executeJevAction({ tool: 'alarm', hour: Number(alarmHour), minute: Number(alarmMinute) }));
@@ -51,7 +90,7 @@ function JevSuggestionCard({ suggestion, disabled }: JevSuggestionCardProps): Re
     <ThemedView type="backgroundElement" style={styles.suggestionCard}>
       {suggestion.tool === 'alarm' ? (
         <>
-          <ThemedText type="smallBold">Alarm suggestion</ThemedText>
+          <ThemedText type="smallBold">Alarm</ThemedText>
           <View style={styles.actionRow}>
             <View style={styles.pickerField}>
               <Picker
@@ -95,10 +134,13 @@ function JevSuggestionCard({ suggestion, disabled }: JevSuggestionCardProps): Re
               />
             </Pressable>
           </View>
+          <ThemedText type="small" style={{ color: theme.textSecondary }}>
+            {getAlarmCountdown(alarmHour, alarmMinute, now)}
+          </ThemedText>
         </>
       ) : (
         <>
-          <ThemedText type="smallBold">Timer suggestion</ThemedText>
+          <ThemedText type="smallBold">Timer</ThemedText>
           <View style={styles.actionRow}>
             <View style={[styles.pickerField, styles.timerPickerField]}>
               <Picker
@@ -131,9 +173,6 @@ function JevSuggestionCard({ suggestion, disabled }: JevSuggestionCardProps): Re
           </View>
         </>
       )}
-      <ThemedText type="small" style={{ color: theme.textSecondary }}>
-        Review the suggested value and tap the arrow to set it.
-      </ThemedText>
     </ThemedView>
   );
 }

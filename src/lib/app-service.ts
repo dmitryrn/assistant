@@ -7,6 +7,8 @@ import { OpenAIClient, type Model } from '@/lib/openai-client';
 import { formatTime } from '@/lib/time';
 import { ToolsExecutor, type AppToolCall } from '@/lib/tools-executor';
 
+const AUTO_EXECUTE_THRESHOLD = 0.8;
+
 type LocalTool = {
   type: 'function';
   function: {
@@ -35,6 +37,15 @@ function createOptions(minimum: number, maximum: number): Record<string, null> {
   }
 
   return options;
+}
+
+function isHighConfidenceChoice<T extends string>(answer: {
+  choice: T;
+  confidence: number;
+  probabilities: { [choice in T]: number };
+}): boolean {
+  return answer.confidence > AUTO_EXECUTE_THRESHOLD
+    && answer.probabilities[answer.choice] > AUTO_EXECUTE_THRESHOLD;
 }
 
 export type AppRequestResult = {
@@ -99,16 +110,35 @@ export class AppService {
     }
 
     const { tool, hour, minute, timerMinutes } = response.answers;
+    const suggestion: JevSuggestion = {
+      tool: tool.choice,
+      hour: Number(hour.choice),
+      minute: Number(minute.choice),
+      timerMinutes: Number(timerMinutes.choice),
+    };
+
+    if (tool.choice === 'alarm' && isHighConfidenceChoice(tool)
+      && isHighConfidenceChoice(hour) && isHighConfidenceChoice(minute)) {
+      const toolCall = await this.executeJevAction({
+        tool: 'alarm',
+        hour: suggestion.hour,
+        minute: suggestion.minute,
+      });
+
+      return { text: '', toolCalls: [toolCall], jevDebug };
+    }
+
+    if (tool.choice === 'timer' && isHighConfidenceChoice(tool) && isHighConfidenceChoice(timerMinutes)) {
+      const toolCall = await this.executeJevAction({ tool: 'timer', minutes: suggestion.timerMinutes });
+
+      return { text: '', toolCalls: [toolCall], jevDebug };
+    }
+
     return {
       text: '',
       toolCalls: [],
       jevDebug,
-      jevSuggestion: {
-        tool: tool.choice,
-        hour: Number(hour.choice),
-        minute: Number(minute.choice),
-        timerMinutes: Number(timerMinutes.choice),
-      },
+      jevSuggestion: suggestion,
     };
   }
 
