@@ -1,6 +1,8 @@
 import type { FunctionTool, Response } from 'openai/resources/responses/responses';
+import { choice, TypeSafeClient } from '@typesafe-ai/sdk';
 
 import { getLocalLlamaContext } from '@/lib/local-llama';
+import { createJevFetch } from '@/lib/jev-fetch';
 import { OpenAIClient, type Model } from '@/lib/openai-client';
 import { formatTime } from '@/lib/time';
 import { ToolsExecutor, type AppToolCall } from '@/lib/tools-executor';
@@ -14,9 +16,32 @@ type LocalTool = {
   };
 };
 
+export type JevSuggestion = {
+  tool: 'alarm' | 'timer' | 'other';
+  hour: number;
+  minute: number;
+  timerMinutes: number;
+};
+
+export type JevClockAction =
+  | { tool: 'alarm'; hour: number; minute: number }
+  | { tool: 'timer'; minutes: number };
+
+function createOptions(minimum: number, maximum: number): Record<string, null> {
+  const options: Record<string, null> = {};
+
+  for (let value = minimum; value <= maximum; value += 1) {
+    options[String(value).padStart(2, '0')] = null;
+  }
+
+  return options;
+}
+
 export type AppRequestResult = {
   text: string;
   toolCalls: AppToolCall[];
+  jevDebug?: string;
+  jevSuggestion?: JevSuggestion;
 };
 
 export class AppService {
@@ -40,6 +65,73 @@ export class AppService {
       text: response.output_text,
       toolCalls,
     };
+  }
+
+  async requestJev(apiKey: string, prompt: string, onDebug?: (debug: string) => void): Promise<AppRequestResult> {
+    const client = new TypeSafeClient({ apiKey, dangerouslyAllowBrowser: true, fetch: createJevFetch() });
+    const response = await client.systemOne({
+      state: {
+        request: prompt,
+        currentLocalTime: this.getCurrentTime(),
+      },
+      questions: {
+        tool: choice('What clock action is the user asking for?', {
+          alarm: 'Set an alarm for a specific time.',
+          timer: 'Start a timer for a duration.',
+          other: 'The request does not ask to set an alarm or start a timer.',
+        }),
+        hour: choice('For an alarm, which hour in local 24-hour time?', createOptions(0, 23)),
+        minute: choice('For an alarm, which minute?', createOptions(0, 59)),
+        timerMinutes: choice('For a timer, how many minutes?', createOptions(1, 60)),
+      },
+    });
+    const jevDebug = JSON.stringify(
+      {
+        model: response.model,
+        answers: response.answers,
+        usage: response.usage,
+      },
+      null,
+      2,
+    );
+    if (onDebug) {
+      onDebug(jevDebug);
+    }
+
+    const { tool, hour, minute, timerMinutes } = response.answers;
+    return {
+      text: '',
+      toolCalls: [],
+      jevDebug,
+      jevSuggestion: {
+        tool: tool.choice,
+        hour: Number(hour.choice),
+        minute: Number(minute.choice),
+        timerMinutes: Number(timerMinutes.choice),
+      },
+    };
+  }
+
+  async executeJevAction(action: JevClockAction): Promise<AppToolCall> {
+    let toolCall: AppToolCall;
+
+    if (action.tool === 'alarm') {
+      toolCall = {
+        id: 'jev-alarm',
+        name: 'set_alarm',
+        arguments: JSON.stringify({ hour: action.hour, minute: action.minute, skipUI: true }),
+      };
+    } else {
+      toolCall = {
+        id: 'jev-timer',
+        name: 'set_timer',
+        arguments: JSON.stringify({ seconds: action.minutes * 60, skipUI: true }),
+      };
+    }
+
+    await this.toolsExecutor.execute([toolCall]);
+
+    return toolCall;
   }
 
   async requestLocal(prompt: string): Promise<AppRequestResult> {

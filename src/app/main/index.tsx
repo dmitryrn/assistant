@@ -1,8 +1,9 @@
 import { useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
+import { Picker } from '@react-native-picker/picker';
 import {
   ExpoSpeechRecognitionModule,
   useSpeechRecognitionEvent,
@@ -11,10 +12,11 @@ import {
 import Toast from 'react-native-toast-message';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import type { JevSuggestion } from '@/lib/app-service';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { sendRequest } from '@/store/request';
+import { executeJevAction, sendRequest } from '@/store/request';
 import { loadSettings } from '@/store/settings';
 
 function getSearchParamValue(value: string | string[] | undefined): string | undefined {
@@ -23,6 +25,117 @@ function getSearchParamValue(value: string | string[] | undefined): string | und
   }
 
   return value;
+}
+
+type JevSuggestionCardProps = {
+  suggestion: JevSuggestion;
+  disabled: boolean;
+};
+
+function JevSuggestionCard({ suggestion, disabled }: JevSuggestionCardProps): React.JSX.Element {
+  const theme = useTheme();
+  const dispatch = useAppDispatch();
+  const [alarmHour, setAlarmHour] = useState(String(suggestion.hour).padStart(2, '0'));
+  const [alarmMinute, setAlarmMinute] = useState(String(suggestion.minute).padStart(2, '0'));
+  const [timerMinutes, setTimerMinutes] = useState(String(suggestion.timerMinutes));
+
+  function handleSetAlarm(): void {
+    dispatch(executeJevAction({ tool: 'alarm', hour: Number(alarmHour), minute: Number(alarmMinute) }));
+  }
+
+  function handleSetTimer(): void {
+    dispatch(executeJevAction({ tool: 'timer', minutes: Number(timerMinutes) }));
+  }
+
+  return (
+    <ThemedView type="backgroundElement" style={styles.suggestionCard}>
+      {suggestion.tool === 'alarm' ? (
+        <>
+          <ThemedText type="smallBold">Alarm suggestion</ThemedText>
+          <View style={styles.actionRow}>
+            <View style={styles.pickerField}>
+              <Picker
+                selectedValue={alarmHour}
+                onValueChange={(value: string) => setAlarmHour(value)}
+                style={[styles.picker, { color: theme.text }]}
+                dropdownIconColor={theme.text}
+                accessibilityLabel="Alarm hour">
+                {Array.from({ length: 24 }, (_, hour) => {
+                  const value = String(hour).padStart(2, '0');
+                  return <Picker.Item key={value} label={value} value={value} />;
+                })}
+              </Picker>
+            </View>
+            <View style={styles.pickerField}>
+              <Picker
+                selectedValue={alarmMinute}
+                onValueChange={(value: string) => setAlarmMinute(value)}
+                style={[styles.picker, { color: theme.text }]}
+                dropdownIconColor={theme.text}
+                accessibilityLabel="Alarm minute">
+                {Array.from({ length: 60 }, (_, minute) => {
+                  const value = String(minute).padStart(2, '0');
+                  return <Picker.Item key={value} label={value} value={value} />;
+                })}
+              </Picker>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Set alarm"
+              onPress={handleSetAlarm}
+              disabled={disabled}
+              style={({ pressed }) => [
+                styles.actionButton,
+                { backgroundColor: theme.text, opacity: pressed || disabled ? 0.65 : 1 },
+              ]}>
+              <SymbolView
+                name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+                size={22}
+                tintColor={theme.background}
+              />
+            </Pressable>
+          </View>
+        </>
+      ) : (
+        <>
+          <ThemedText type="smallBold">Timer suggestion</ThemedText>
+          <View style={styles.actionRow}>
+            <View style={[styles.pickerField, styles.timerPickerField]}>
+              <Picker
+                selectedValue={timerMinutes}
+                onValueChange={(value: string) => setTimerMinutes(value)}
+                style={[styles.picker, { color: theme.text }]}
+                dropdownIconColor={theme.text}
+                accessibilityLabel="Timer duration in minutes">
+                {Array.from({ length: 60 }, (_, index) => {
+                  const value = String(index + 1);
+                  return <Picker.Item key={value} label={`${value} minutes`} value={value} />;
+                })}
+              </Picker>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Start timer"
+              onPress={handleSetTimer}
+              disabled={disabled}
+              style={({ pressed }) => [
+                styles.actionButton,
+                { backgroundColor: theme.text, opacity: pressed || disabled ? 0.65 : 1 },
+              ]}>
+              <SymbolView
+                name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+                size={22}
+                tintColor={theme.background}
+              />
+            </Pressable>
+          </View>
+        </>
+      )}
+      <ThemedText type="small" style={{ color: theme.textSecondary }}>
+        Review the suggested value and tap the arrow to set it.
+      </ThemedText>
+    </ThemedView>
+  );
 }
 
 export default function HomeScreen(): React.JSX.Element {
@@ -36,7 +149,10 @@ export default function HomeScreen(): React.JSX.Element {
   const handledAssistIntentId = useRef<string | undefined>(undefined);
   const [prompt, setPrompt] = useState('');
   const [listening, setListening] = useState(false);
-  const { isLoading, toolCallsDebug } = useAppSelector((state) => state.request);
+  const provider = useAppSelector((state) => state.settings.provider);
+  const { isExecuting, isLoading, jevDebug, jevSuggestion, toolCallsDebug } = useAppSelector(
+    (state) => state.request,
+  );
 
   useSpeechRecognitionEvent('start', () => setListening(true));
   useSpeechRecognitionEvent('end', () => setListening(false));
@@ -125,77 +241,105 @@ export default function HomeScreen(): React.JSX.Element {
           styles.safeArea,
           {
             paddingTop: insets.top + Spacing.four,
-            paddingBottom: insets.bottom + BottomTabInset + Spacing.three,
+            paddingBottom: insets.bottom + Spacing.three,
           },
         ]}>
-        <ThemedView type="backgroundElement" style={styles.card}>
-          <TextInput
-            multiline
-            onChangeText={setPrompt}
-            placeholder="Your request"
-            placeholderTextColor={theme.textSecondary}
-            style={[
-              styles.input,
-              {
-                color: theme.text,
-                borderColor: theme.backgroundSelected,
-              },
-            ]}
-            value={prompt}
-          />
-          <View style={styles.actionsRow}>
-            <Pressable
-              onPress={handleMicPress}
-              style={({ pressed }) => [
-                styles.micButton,
-                {
-                  backgroundColor: listening
-                    ? theme.backgroundSelected
-                    : theme.backgroundElement,
-                  opacity: pressed ? 0.75 : 1,
-                },
-              ]}>
-              <SymbolView
-                name={{
-                  ios: listening ? 'pause.fill' : 'play.fill',
-                  android: listening ? 'pause' : 'play_arrow',
-                  web: listening ? 'pause' : 'play_arrow',
-                }}
-                size={18}
-                weight="medium"
-                tintColor={theme.text}
-              />
-            </Pressable>
-            <Pressable
-              onPress={handleSend}
-              style={({ pressed }) => [
-                styles.sendButton,
-                {
-                  backgroundColor: theme.text,
-                  opacity: pressed || isLoading ? 0.75 : 1,
-                },
-              ]}
-              disabled={isLoading}>
-              <ThemedText style={[styles.buttonText, { color: theme.background }]}>
-                {isLoading ? 'Sending...' : 'Send request'}
-              </ThemedText>
-            </Pressable>
-          </View>
-
-          {toolCallsDebug ? (
-            <ThemedView
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.contentContainer}
+          keyboardShouldPersistTaps="handled">
+          <ThemedView type="backgroundElement" style={styles.card}>
+            <TextInput
+              multiline
+              onChangeText={setPrompt}
+              placeholder="Your request"
+              placeholderTextColor={theme.textSecondary}
               style={[
-                styles.output,
+                styles.input,
                 {
+                  color: theme.text,
                   borderColor: theme.backgroundSelected,
                 },
-              ]}>
-              <ThemedText type="code" style={[styles.outputText, { color: theme.text }]}>
-                {toolCallsDebug}
-              </ThemedText>
+              ]}
+              value={prompt}
+            />
+            <View style={styles.actionsRow}>
+              <Pressable
+                onPress={handleMicPress}
+                style={({ pressed }) => [
+                  styles.micButton,
+                  {
+                    backgroundColor: listening
+                      ? theme.backgroundSelected
+                      : theme.backgroundElement,
+                    opacity: pressed ? 0.75 : 1,
+                  },
+                ]}>
+                <SymbolView
+                  name={{
+                    ios: listening ? 'pause.fill' : 'play.fill',
+                    android: listening ? 'pause' : 'play_arrow',
+                    web: listening ? 'pause' : 'play_arrow',
+                  }}
+                  size={18}
+                  weight="medium"
+                  tintColor={theme.text}
+                />
+              </Pressable>
+              <Pressable
+                onPress={handleSend}
+                style={({ pressed }) => [
+                  styles.sendButton,
+                  {
+                    backgroundColor: theme.text,
+                    opacity: pressed || isLoading ? 0.75 : 1,
+                  },
+                ]}
+                disabled={isLoading}>
+                <ThemedText style={[styles.buttonText, { color: theme.background }]}>
+                  {isLoading ? 'Sending...' : 'Send request'}
+                </ThemedText>
+              </Pressable>
+            </View>
+
+            {toolCallsDebug && provider !== 'jev' ? (
+              <ThemedView
+                style={[
+                  styles.output,
+                  {
+                    borderColor: theme.backgroundSelected,
+                  },
+                ]}>
+                <ThemedText type="code" style={[styles.outputText, { color: theme.text }]}>
+                  {toolCallsDebug}
+                </ThemedText>
+              </ThemedView>
+            ) : null}
+          </ThemedView>
+          {jevSuggestion && jevSuggestion.tool !== 'other' ? (
+            <JevSuggestionCard
+              key={`${jevSuggestion.tool}-${jevSuggestion.hour}-${jevSuggestion.minute}-${jevSuggestion.timerMinutes}`}
+              suggestion={jevSuggestion}
+              disabled={isLoading || isExecuting}
+            />
+          ) : null}
+          {jevDebug ? (
+            <ThemedView type="backgroundElement" style={styles.debugCard}>
+              <ThemedText type="smallBold">Jev debug</ThemedText>
+              <ScrollView
+                style={[
+                  styles.debugOutput,
+                  {
+                    borderColor: theme.backgroundSelected,
+                  },
+                ]}>
+                <ThemedText type="code" style={[styles.outputText, { color: theme.text }]}>
+                  {jevDebug}
+                </ThemedText>
+              </ScrollView>
             </ThemedView>
           ) : null}
-        </ThemedView>
+        </ScrollView>
       </SafeAreaView>
     </ThemedView>
   );
@@ -209,10 +353,17 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     paddingHorizontal: Spacing.four,
-    gap: Spacing.three,
     maxWidth: MaxContentWidth,
     width: '100%',
     alignSelf: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  contentContainer: {
+    flexGrow: 1,
+    gap: Spacing.three,
+    paddingBottom: Spacing.three,
   },
   card: {
     gap: Spacing.three,
@@ -231,6 +382,51 @@ const styles = StyleSheet.create({
   },
   output: {
     minHeight: 112,
+    borderWidth: 1,
+    borderRadius: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.three,
+  },
+  debugCard: {
+    gap: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.four,
+    borderRadius: Spacing.four,
+  },
+  suggestionCard: {
+    gap: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.four,
+    borderRadius: Spacing.four,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  pickerField: {
+    flex: 1,
+    minWidth: 0,
+    borderWidth: 1,
+    borderColor: '#80808055',
+    borderRadius: Spacing.three,
+    overflow: 'hidden',
+  },
+  timerPickerField: {
+    flex: 1,
+  },
+  picker: {
+    height: 56,
+  },
+  actionButton: {
+    width: 48,
+    height: 48,
+    borderRadius: Spacing.three,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  debugOutput: {
+    maxHeight: 280,
     borderWidth: 1,
     borderRadius: Spacing.three,
     paddingHorizontal: Spacing.three,

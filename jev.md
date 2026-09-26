@@ -8,7 +8,10 @@ if alarm
     isolate label somehow? idk how, no label for now | optional
     skipUI: true
 
+    type: alarm, hour minute
+
 if timer
     how many minutes (1-60)
     skipUI: true
 
+    type: timer, minutes
