@@ -6,15 +6,17 @@ import { loadLocalLlamaModel, unloadLocalLlamaModel } from '@/lib/local-llama';
 import type { RootState } from '@/store';
 
 const OPENAI_API_KEY_STORAGE_KEY = 'settings.openaiApiKey';
+const JEV_API_KEY_STORAGE_KEY = 'settings.jevApiKey';
 const OPENAI_MODEL_STORAGE_KEY = 'settings.model';
 const PROVIDER_STORAGE_KEY = 'settings.provider';
 const LOCAL_MODEL_PATH_STORAGE_KEY = 'settings.localModelPath';
 
-export type SettingsProvider = 'openai' | 'local';
+export type SettingsProvider = 'openai' | 'jev' | 'local';
 type LocalModelStatus = 'idle' | 'loading' | 'loaded' | 'unloading' | 'error';
 
 type SettingsState = {
   openAIAPIKey: string;
+  jevAPIKey: string;
   openAIModel: string;
   localModelPath: string;
   localModelStatus: LocalModelStatus;
@@ -26,6 +28,7 @@ type SettingsState = {
 
 const initialState: SettingsState = {
   openAIAPIKey: '',
+  jevAPIKey: '',
   openAIModel: '',
   localModelPath: '',
   localModelStatus: 'idle',
@@ -48,16 +51,21 @@ function getProvider(value: string | null): SettingsProvider {
     return 'local';
   }
 
+  if (value === 'jev') {
+    return 'jev';
+  }
+
   return 'openai';
 }
 
 export const loadSettings = createAsyncThunk<
-  { openAIAPIKey: string; openAIModel: string; localModelPath: string; provider: SettingsProvider },
+  { openAIAPIKey: string; jevAPIKey: string; openAIModel: string; localModelPath: string; provider: SettingsProvider },
   void,
   { rejectValue: string }
 >('settings/load', async (_, { dispatch, rejectWithValue }) => {
   try {
     const openAIAPIKey = (await SecureStore.getItemAsync(OPENAI_API_KEY_STORAGE_KEY)) ?? '';
+    const jevAPIKey = (await SecureStore.getItemAsync(JEV_API_KEY_STORAGE_KEY)) ?? '';
     const openAIModel = (await SecureStore.getItemAsync(OPENAI_MODEL_STORAGE_KEY)) ?? '';
     const localModelPath = (await SecureStore.getItemAsync(LOCAL_MODEL_PATH_STORAGE_KEY)) ?? '';
     const provider = getProvider(await SecureStore.getItemAsync(PROVIDER_STORAGE_KEY));
@@ -66,26 +74,29 @@ export const loadSettings = createAsyncThunk<
       dispatch(loadLocalModel(localModelPath));
     }
 
-    return { openAIAPIKey, openAIModel, localModelPath, provider };
+    return { openAIAPIKey, jevAPIKey, openAIModel, localModelPath, provider };
   } catch (error) {
     return rejectWithValue(getErrorMessage(error));
   }
 });
 
 export const saveSettings = createAsyncThunk<
-  { openAIAPIKey: string; openAIModel: string; localModelPath: string; provider: SettingsProvider },
-  { openAIAPIKey: string; openAIModel: string; localModelPath: string; provider: SettingsProvider },
+  { openAIAPIKey: string; jevAPIKey: string; openAIModel: string; localModelPath: string; provider: SettingsProvider },
+  { openAIAPIKey: string; jevAPIKey: string; openAIModel: string; localModelPath: string; provider: SettingsProvider },
   { rejectValue: string }
->('settings/save', async ({ openAIAPIKey, openAIModel, localModelPath, provider }, { rejectWithValue }) => {
+>('settings/save', async ({ openAIAPIKey, jevAPIKey, openAIModel, localModelPath, provider }, { rejectWithValue }) => {
   try {
     const trimmedKey = openAIAPIKey.trim();
+    const trimmedJevKey = jevAPIKey.trim();
     await SecureStore.setItemAsync(OPENAI_API_KEY_STORAGE_KEY, trimmedKey);
+    await SecureStore.setItemAsync(JEV_API_KEY_STORAGE_KEY, trimmedJevKey);
     await SecureStore.setItemAsync(OPENAI_MODEL_STORAGE_KEY, openAIModel);
     await SecureStore.setItemAsync(LOCAL_MODEL_PATH_STORAGE_KEY, localModelPath);
     await SecureStore.setItemAsync(PROVIDER_STORAGE_KEY, provider);
 
     return {
       openAIAPIKey: trimmedKey,
+      jevAPIKey: trimmedJevKey,
       openAIModel,
       localModelPath,
       provider,
@@ -122,7 +133,7 @@ export const selectProvider = createAsyncThunk<
   SettingsProvider,
   { state: RootState; rejectValue: string }
 >('settings/selectProvider', async (provider, { dispatch, getState }) => {
-  if (provider === 'openai') {
+  if (provider !== 'local') {
     dispatch(unloadLocalModel());
     return provider;
   }
@@ -143,6 +154,9 @@ const settingsSlice = createSlice({
     setOpenAIAPIKey(state, action: PayloadAction<string>) {
       state.openAIAPIKey = action.payload;
     },
+    setJevAPIKey(state, action: PayloadAction<string>) {
+      state.jevAPIKey = action.payload;
+    },
     setOpenAIModel(state, action: PayloadAction<string>) {
       state.openAIModel = action.payload;
     },
@@ -162,6 +176,7 @@ const settingsSlice = createSlice({
       .addCase(loadSettings.fulfilled, (state, action) => {
         state.isLoading = false;
         state.openAIAPIKey = action.payload.openAIAPIKey;
+        state.jevAPIKey = action.payload.jevAPIKey;
         state.openAIModel = action.payload.openAIModel;
         state.localModelPath = action.payload.localModelPath;
         state.provider = action.payload.provider;
@@ -178,6 +193,7 @@ const settingsSlice = createSlice({
       .addCase(saveSettings.fulfilled, (state, action) => {
         state.isLoading = false;
         state.openAIAPIKey = action.payload.openAIAPIKey;
+        state.jevAPIKey = action.payload.jevAPIKey;
         state.openAIModel = action.payload.openAIModel;
         state.localModelPath = action.payload.localModelPath;
         state.provider = action.payload.provider;
@@ -236,6 +252,6 @@ const settingsSlice = createSlice({
   },
 });
 
-export const { setLocalModelPath, setOpenAIAPIKey, setOpenAIModel, setProvider } = settingsSlice.actions;
+export const { setJevAPIKey, setLocalModelPath, setOpenAIAPIKey, setOpenAIModel, setProvider } = settingsSlice.actions;
 
 export default settingsSlice.reducer;

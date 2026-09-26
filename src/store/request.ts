@@ -47,6 +47,10 @@ export const sendRequest = createAsyncThunk<string, { prompt: string }, { state:
       }
     }
 
+    if (provider === 'jev') {
+      return rejectWithValue('Jev requests are not supported yet.');
+    }
+
     if (!openAIAPIKey) {
       return rejectWithValue('OpenAI API key is not set.');
     }

@@ -16,6 +16,7 @@
   "dependencies": {
     "@react-native-picker/picker": "^2.11.4",
     "@reduxjs/toolkit": "^2.9.1",
+    "@typesafe-ai/sdk": "^0.6.0",
     "expo": "^56.0.0",
     "expo-build-properties": "~56.0.19",
     "expo-constants": "~56.0.18",

@@ -4,6 +4,7 @@ import { Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LocalPane } from '@/components/settings/localpane';
+import { JevPane } from '@/components/settings/jevpane';
 import { OpenAIPane } from '@/components/settings/openaipane';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -15,6 +16,7 @@ import {
   loadSettings,
   saveSettings,
   selectProvider,
+  setJevAPIKey,
   setOpenAIModel,
   type SettingsProvider,
 } from '@/store/settings';
@@ -23,7 +25,7 @@ export default function SettingsScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const dispatch = useAppDispatch();
-  const { openAIAPIKey, openAIModel, localModelPath, provider, isLoading } = useAppSelector(
+  const { openAIAPIKey, jevAPIKey, openAIModel, localModelPath, provider, isLoading } = useAppSelector(
     (state) => state.settings,
   );
   const [localOpenAIAPIKey, setLocalOpenAIAPIKey] = useState<string | null>(null);
@@ -34,7 +36,7 @@ export default function SettingsScreen(): React.JSX.Element {
   }, [dispatch]);
 
   function handleSave(): void {
-    dispatch(saveSettings({ openAIAPIKey: openAIAPIKeyValue, openAIModel, localModelPath, provider }));
+    dispatch(saveSettings({ openAIAPIKey: openAIAPIKeyValue, jevAPIKey, openAIModel, localModelPath, provider }));
   }
 
   function handleSelectModel(value: string): void {
@@ -59,6 +61,7 @@ export default function SettingsScreen(): React.JSX.Element {
           <ThemedText type="smallBold">Provider</ThemedText>
           <SelectDropdown value={provider} onChange={handleSelectProvider}>
             <Picker.Item label="OpenAI" value="openai" />
+            <Picker.Item label="Jev" value="jev" />
             <Picker.Item label="Local" value="local" />
           </SelectDropdown>
         </ThemedView>
@@ -73,6 +76,9 @@ export default function SettingsScreen(): React.JSX.Element {
           />
         )}
         {provider === 'local' && <LocalPane />}
+        {provider === 'jev' && (
+          <JevPane apiKey={jevAPIKey} onChangeApiKey={(value) => dispatch(setJevAPIKey(value))} />
+        )}
 
         <ThemedView style={styles.spacer} />
 
