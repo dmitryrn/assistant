@@ -14,7 +14,7 @@ export function getAppService(): AppService {
   const toolsExecutor = new ToolsExecutor(clock);
   const openAIClient = new OpenAIClient();
 
-  appServiceSingleton = new AppService(openAIClient, toolsExecutor);
+  appServiceSingleton = new AppService(openAIClient, toolsExecutor, clock);
 
   return appServiceSingleton;
 }

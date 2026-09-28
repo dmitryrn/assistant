@@ -2,12 +2,16 @@ import type { FunctionTool, Response } from 'openai/resources/responses/response
 import { choice, TypeSafeClient } from '@typesafe-ai/sdk';
 
 import { getLocalLlamaContext } from '@/lib/local-llama';
+import { contiguousPhrases } from '@/lib/contiguous-phrases';
+import type { SetAlarmArguments, SetTimerArguments } from '@/lib/clock';
 import { createJevFetch } from '@/lib/jev-fetch';
 import { OpenAIClient, type Model } from '@/lib/openai-client';
 import { formatTime } from '@/lib/time';
 import { ToolsExecutor, type AppToolCall } from '@/lib/tools-executor';
 
 const AUTO_EXECUTE_THRESHOLD = 0.8;
+const NO_LABEL = '__no_label__';
+const MAX_CHOICE_OPTIONS = 255;
 
 type LocalTool = {
   type: 'function';
@@ -23,10 +27,11 @@ export type JevSuggestion = {
   hour: number;
   minute: number;
   timerMinutes: number;
+  label?: string;
 };
 
 export type JevClockAction =
-  | { tool: 'alarm'; hour: number; minute: number }
+  | { tool: 'alarm'; hour: number; minute: number; label?: string }
   | { tool: 'timer'; minutes: number };
 
 function createOptions(minimum: number, maximum: number): Record<string, null> {
@@ -35,6 +40,24 @@ function createOptions(minimum: number, maximum: number): Record<string, null> {
   for (let value = minimum; value <= maximum; value += 1) {
     options[String(value).padStart(2, '0')] = null;
   }
+
+  return options;
+}
+
+function createLabelOptions(prompt: string): Record<string, string | null> {
+  const candidates = contiguousPhrases(prompt);
+
+  if (candidates.length + 1 > MAX_CHOICE_OPTIONS) {
+    throw new Error('The speech request has too many label candidates for Jev.');
+  }
+
+  const options: Record<string, string | null> = {};
+
+  for (const phrase of candidates) {
+    options[phrase] = 'An exact contiguous phrase from the speech request.';
+  }
+
+  options[NO_LABEL] = 'No candidate is a meaningful alarm label.';
 
   return options;
 }
@@ -59,6 +82,10 @@ export class AppService {
   constructor(
     private openAIClient: OpenAIClient,
     private toolsExecutor: ToolsExecutor,
+    private clock: {
+      setAlarm(arguments_: SetAlarmArguments): Promise<void>;
+      setTimer(arguments_: SetTimerArguments): Promise<void>;
+    },
   ) {}
 
   async requestOpenAI(apiKey: string, model: string, prompt: string): Promise<AppRequestResult> {
@@ -94,6 +121,10 @@ export class AppService {
         hour: choice('For an alarm, which hour in local 24-hour time?', createOptions(0, 23)),
         minute: choice('For an alarm, which minute?', createOptions(0, 59)),
         timerMinutes: choice('For a timer, how many minutes?', createOptions(1, 60)),
+        alarmLabel: choice(
+          'Which candidate is the descriptive label for the alarm? Exclude alarm command words, time expressions, and connector words such as "for". Choose __no_label__ when no meaningful label is present.',
+          createLabelOptions(prompt),
+        ),
       },
     });
     const jevDebug = JSON.stringify(
@@ -109,20 +140,28 @@ export class AppService {
       onDebug(jevDebug);
     }
 
-    const { tool, hour, minute, timerMinutes } = response.answers;
+    const { tool, hour, minute, timerMinutes, alarmLabel } = response.answers;
+    let label: string | undefined;
+    if (alarmLabel.choice !== NO_LABEL) {
+      label = alarmLabel.choice;
+    }
+
     const suggestion: JevSuggestion = {
       tool: tool.choice,
       hour: Number(hour.choice),
       minute: Number(minute.choice),
       timerMinutes: Number(timerMinutes.choice),
+      label,
     };
 
     if (tool.choice === 'alarm' && isHighConfidenceChoice(tool)
-      && isHighConfidenceChoice(hour) && isHighConfidenceChoice(minute)) {
+      && isHighConfidenceChoice(hour) && isHighConfidenceChoice(minute)
+      && isHighConfidenceChoice(alarmLabel)) {
       const toolCall = await this.executeJevAction({
         tool: 'alarm',
         hour: suggestion.hour,
         minute: suggestion.minute,
+        label: suggestion.label,
       });
 
       return { text: '', toolCalls: [toolCall], jevDebug };
@@ -149,17 +188,17 @@ export class AppService {
       toolCall = {
         id: 'jev-alarm',
         name: 'set_alarm',
-        arguments: JSON.stringify({ hour: action.hour, minute: action.minute, skipUI: true }),
+        arguments: JSON.stringify({ hour: action.hour, minute: action.minute, label: action.label ?? null, skipUI: true }),
       };
+      await this.clock.setAlarm({ hour: action.hour, minute: action.minute, label: action.label, skipUI: true });
     } else {
       toolCall = {
         id: 'jev-timer',
         name: 'set_timer',
         arguments: JSON.stringify({ seconds: action.minutes * 60, skipUI: true }),
       };
+      await this.clock.setTimer({ seconds: action.minutes * 60, skipUI: true });
     }
-
-    await this.toolsExecutor.execute([toolCall]);
 
     return toolCall;
   }

@@ -79,7 +79,14 @@ function JevSuggestionCard({ suggestion, disabled }: JevSuggestionCardProps): Re
   }, []);
 
   function handleSetAlarm(): void {
-    dispatch(executeJevAction({ tool: 'alarm', hour: Number(alarmHour), minute: Number(alarmMinute) }));
+    dispatch(
+      executeJevAction({
+        tool: 'alarm',
+        hour: Number(alarmHour),
+        minute: Number(alarmMinute),
+        label: suggestion.label,
+      }),
+    );
   }
 
   function handleSetTimer(): void {
