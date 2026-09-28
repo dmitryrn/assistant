@@ -71,11 +71,58 @@ function isHighConfidenceChoice<T extends string>(answer: {
     && answer.probabilities[answer.choice] > AUTO_EXECUTE_THRESHOLD;
 }
 
+function isNoLabelChoice(choice: string): boolean {
+  const normalizedChoice = choice.trim().toLowerCase();
+
+  return normalizedChoice === NO_LABEL
+    || normalizedChoice === 'no label'
+    || normalizedChoice === 'unknown';
+}
+
+function getMostProbableChoice<T extends string>(answer: {
+  choice: T;
+  probabilities: { [choice in T]: number };
+}): T {
+  let mostProbableChoice = answer.choice;
+  let highestProbability = answer.probabilities[answer.choice];
+
+  for (const [choice, probability] of Object.entries(answer.probabilities) as [T, number][]) {
+    if (probability > highestProbability) {
+      mostProbableChoice = choice;
+      highestProbability = probability;
+    }
+  }
+
+  return mostProbableChoice;
+}
+
+function getAlarmLabel(answer: {
+  choice: string;
+  confidence: number;
+  probabilities: { [choice: string]: number };
+}): string | undefined {
+  if (isNoLabelChoice(answer.choice)) {
+    return undefined;
+  }
+
+  let choice = answer.choice;
+  if (!isHighConfidenceChoice(answer)) {
+    choice = getMostProbableChoice(answer);
+  }
+
+  if (isNoLabelChoice(choice)) {
+    return undefined;
+  }
+
+  return choice;
+}
+
 export type AppRequestResult = {
   text: string;
   toolCalls: AppToolCall[];
   jevDebug?: string;
   jevSuggestion?: JevSuggestion;
+  executedJevAction?: JevClockAction;
 };
 
 export class AppService {
@@ -141,10 +188,7 @@ export class AppService {
     }
 
     const { tool, hour, minute, timerMinutes, alarmLabel } = response.answers;
-    let label: string | undefined;
-    if (alarmLabel.choice !== NO_LABEL) {
-      label = alarmLabel.choice;
-    }
+    const label = getAlarmLabel(alarmLabel);
 
     const suggestion: JevSuggestion = {
       tool: tool.choice,
@@ -157,20 +201,22 @@ export class AppService {
     if (tool.choice === 'alarm' && isHighConfidenceChoice(tool)
       && isHighConfidenceChoice(hour) && isHighConfidenceChoice(minute)
       && isHighConfidenceChoice(alarmLabel)) {
-      const toolCall = await this.executeJevAction({
+      const action: JevClockAction = {
         tool: 'alarm',
         hour: suggestion.hour,
         minute: suggestion.minute,
         label: suggestion.label,
-      });
+      };
+      const toolCall = await this.executeJevAction(action);
 
-      return { text: '', toolCalls: [toolCall], jevDebug };
+      return { text: '', toolCalls: [toolCall], jevDebug, executedJevAction: action };
     }
 
     if (tool.choice === 'timer' && isHighConfidenceChoice(tool) && isHighConfidenceChoice(timerMinutes)) {
-      const toolCall = await this.executeJevAction({ tool: 'timer', minutes: suggestion.timerMinutes });
+      const action: JevClockAction = { tool: 'timer', minutes: suggestion.timerMinutes };
+      const toolCall = await this.executeJevAction(action);
 
-      return { text: '', toolCalls: [toolCall], jevDebug };
+      return { text: '', toolCalls: [toolCall], jevDebug, executedJevAction: action };
     }
 
     return {

@@ -69,6 +69,7 @@ function JevSuggestionCard({ suggestion, disabled }: JevSuggestionCardProps): Re
   const dispatch = useAppDispatch();
   const [alarmHour, setAlarmHour] = useState(String(suggestion.hour).padStart(2, '0'));
   const [alarmMinute, setAlarmMinute] = useState(String(suggestion.minute).padStart(2, '0'));
+  const [alarmLabel, setAlarmLabel] = useState(suggestion.label ?? '');
   const [timerMinutes, setTimerMinutes] = useState(String(suggestion.timerMinutes));
   const [now, setNow] = useState(() => new Date());
 
@@ -79,12 +80,18 @@ function JevSuggestionCard({ suggestion, disabled }: JevSuggestionCardProps): Re
   }, []);
 
   function handleSetAlarm(): void {
+    const trimmedLabel = alarmLabel.trim();
+    let label: string | undefined;
+    if (trimmedLabel) {
+      label = trimmedLabel;
+    }
+
     dispatch(
       executeJevAction({
         tool: 'alarm',
         hour: Number(alarmHour),
         minute: Number(alarmMinute),
-        label: suggestion.label,
+        label,
       }),
     );
   }
@@ -97,7 +104,18 @@ function JevSuggestionCard({ suggestion, disabled }: JevSuggestionCardProps): Re
     <ThemedView type="backgroundElement" style={styles.suggestionCard}>
       {suggestion.tool === 'alarm' ? (
         <>
-          <ThemedText type="smallBold">Alarm</ThemedText>
+          <View style={styles.suggestionHeader}>
+            <ThemedText type="smallBold">Alarm</ThemedText>
+            <TextInput
+              accessibilityLabel="Alarm label"
+              editable={!disabled}
+              onChangeText={setAlarmLabel}
+              placeholder="Alarm label (optional)"
+              placeholderTextColor={theme.textSecondary}
+              style={[styles.alarmLabelInput, { color: theme.text, borderColor: theme.backgroundSelected }]}
+              value={alarmLabel}
+            />
+          </View>
           <View style={styles.actionRow}>
             <View style={styles.pickerField}>
               <Picker
@@ -364,7 +382,7 @@ export default function HomeScreen(): React.JSX.Element {
           </ThemedView>
           {jevSuggestion && jevSuggestion.tool !== 'other' ? (
             <JevSuggestionCard
-              key={`${jevSuggestion.tool}-${jevSuggestion.hour}-${jevSuggestion.minute}-${jevSuggestion.timerMinutes}`}
+              key={`${jevSuggestion.tool}-${jevSuggestion.hour}-${jevSuggestion.minute}-${jevSuggestion.timerMinutes}-${jevSuggestion.label ?? ''}`}
               suggestion={jevSuggestion}
               disabled={isLoading || isExecuting}
             />
@@ -444,6 +462,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.four,
     borderRadius: Spacing.four,
+  },
+  suggestionHeader: {
+    gap: Spacing.one,
+  },
+  alarmLabelInput: {
+    borderWidth: 1,
+    borderRadius: Spacing.three,
+    fontSize: 16,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
   },
   actionRow: {
     flexDirection: 'row',

@@ -17,6 +17,7 @@ type SendRequestResult = {
   toolCallsDebug: string;
   jevDebug: string;
   jevSuggestion: JevSuggestion | null;
+  executedJevAction?: JevClockAction;
 };
 
 const initialState: RequestState = {
@@ -33,6 +34,28 @@ function getErrorMessage(error: unknown): string {
   }
 
   return 'Unknown error';
+}
+
+function showActionSuccess(action: JevClockAction): void {
+  if (action.tool === 'alarm') {
+    const hour = String(action.hour).padStart(2, '0');
+    const minute = String(action.minute).padStart(2, '0');
+    let text2 = `Set for ${hour}:${minute}`;
+
+    if (action.label) {
+      text2 += `: ${action.label}`;
+    }
+
+    Toast.show({ type: 'success', text1: 'Alarm set', text2 });
+    return;
+  }
+
+  let unit = 'minutes';
+  if (action.minutes === 1) {
+    unit = 'minute';
+  }
+
+  Toast.show({ type: 'success', text1: 'Timer set', text2: `${action.minutes} ${unit}` });
 }
 
 export const sendRequest = createAsyncThunk<SendRequestResult, { prompt: string }, { state: RootState; rejectValue: string }>(
@@ -72,6 +95,7 @@ export const sendRequest = createAsyncThunk<SendRequestResult, { prompt: string 
           toolCallsDebug: JSON.stringify(result.toolCalls, null, 2),
           jevDebug: result.jevDebug ?? '',
           jevSuggestion: result.jevSuggestion ?? null,
+          executedJevAction: result.executedJevAction,
         };
       } catch (error) {
         console.log(error);
@@ -137,6 +161,10 @@ const requestSlice = createSlice({
         state.toolCallsDebug = action.payload.toolCallsDebug;
         state.jevDebug = action.payload.jevDebug;
         state.jevSuggestion = action.payload.jevSuggestion;
+
+        if (action.payload.executedJevAction) {
+          showActionSuccess(action.payload.executedJevAction);
+        }
       })
       .addCase(sendRequest.rejected, (state, action) => {
         state.isLoading = false;
@@ -150,6 +178,7 @@ const requestSlice = createSlice({
       .addCase(executeJevAction.fulfilled, (state, action) => {
         state.isExecuting = false;
         state.toolCallsDebug = action.payload;
+        showActionSuccess(action.meta.arg);
       })
       .addCase(executeJevAction.rejected, (state, action) => {
         state.isExecuting = false;
