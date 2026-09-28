@@ -391,6 +391,7 @@ export default function HomeScreen(): React.JSX.Element {
             <ThemedView type="backgroundElement" style={styles.debugCard}>
               <ThemedText type="smallBold">Jev debug</ThemedText>
               <ScrollView
+                nestedScrollEnabled
                 style={[
                   styles.debugOutput,
                   {
