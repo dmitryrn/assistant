@@ -392,6 +392,9 @@ export default function HomeScreen(): React.JSX.Element {
               <ThemedText type="smallBold">Jev debug</ThemedText>
               <ScrollView
                 nestedScrollEnabled
+                scrollEnabled
+                showsVerticalScrollIndicator
+                onStartShouldSetResponderCapture={() => true}
                 style={[
                   styles.debugOutput,
                   {
@@ -501,7 +504,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   debugOutput: {
-    maxHeight: 280,
+    height: 280,
     borderWidth: 1,
     borderRadius: Spacing.three,
     paddingHorizontal: Spacing.three,
