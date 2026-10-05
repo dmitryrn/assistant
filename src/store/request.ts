@@ -3,6 +3,7 @@ import Toast from 'react-native-toast-message';
 
 import type { JevClockAction, JevSuggestion } from '@/lib/app-service';
 import { getAppService } from '@/lib/get-app-service';
+import { formatDuration, getAlarmCountdown } from '@/lib/time';
 import type { RootState } from '@/store';
 
 type RequestState = {
@@ -46,7 +47,7 @@ function showActionSuccess(action: JevClockAction): void {
       text2 += `: ${action.label}`;
     }
 
-    Toast.show({ type: 'success', text1: 'Alarm set', text2 });
+    Toast.show({ type: 'success', text1: 'Alarm set', text2: `${text2} (${getAlarmCountdown(action.hour, action.minute, new Date())})` });
     return;
   }
 
@@ -55,7 +56,7 @@ function showActionSuccess(action: JevClockAction): void {
     unit = 'minute';
   }
 
-  Toast.show({ type: 'success', text1: 'Timer set', text2: `${action.minutes} ${unit}` });
+  Toast.show({ type: 'success', text1: 'Timer set', text2: `${action.minutes} ${unit} (${formatDuration(action.minutes)})` });
 }
 
 export const sendRequest = createAsyncThunk<SendRequestResult, { prompt: string }, { state: RootState; rejectValue: string }>(

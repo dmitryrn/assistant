@@ -15,6 +15,7 @@ import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { JevSuggestion } from '@/lib/app-service';
+import { getAlarmCountdown } from '@/lib/time';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { executeJevAction, sendRequest } from '@/store/request';
 import { loadSettings } from '@/store/settings';
@@ -25,38 +26,6 @@ function getSearchParamValue(value: string | string[] | undefined): string | und
   }
 
   return value;
-}
-
-function getAlarmCountdown(hour: string, minute: string, now: Date): string {
-  const alarmTime = new Date(now);
-  alarmTime.setHours(Number(hour), Number(minute), 0, 0);
-
-  if (alarmTime.getTime() <= now.getTime()) {
-    alarmTime.setDate(alarmTime.getDate() + 1);
-  }
-
-  const minutesUntilAlarm = Math.ceil((alarmTime.getTime() - now.getTime()) / 60_000);
-  const hours = Math.floor(minutesUntilAlarm / 60);
-  const minutes = minutesUntilAlarm % 60;
-  const duration: string[] = [];
-
-  if (hours > 0) {
-    let unit = 'hours';
-    if (hours === 1) {
-      unit = 'hour';
-    }
-    duration.push(`${hours} ${unit}`);
-  }
-
-  if (minutes > 0 || duration.length === 0) {
-    let unit = 'minutes';
-    if (minutes === 1) {
-      unit = 'minute';
-    }
-    duration.push(`${minutes} ${unit}`);
-  }
-
-  return `in ${duration.join(' ')}`;
 }
 
 type JevSuggestionCardProps = {
@@ -160,7 +129,7 @@ function JevSuggestionCard({ suggestion, disabled }: JevSuggestionCardProps): Re
             </Pressable>
           </View>
           <ThemedText type="small" style={{ color: theme.textSecondary }}>
-            {getAlarmCountdown(alarmHour, alarmMinute, now)}
+            {getAlarmCountdown(Number(alarmHour), Number(alarmMinute), now)}
           </ThemedText>
         </>
       ) : (
